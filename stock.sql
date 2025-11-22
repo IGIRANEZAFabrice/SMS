@@ -145,3 +145,38 @@ CREATE TABLE stock_take (
     FOREIGN KEY (item_id) REFERENCES tbl_items(item_id),
     FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
+
+-- ================================
+-- RECEIPT HEADER / MAIN TABLE
+-- ================================
+CREATE TABLE receipts (
+    receipt_id INT AUTO_INCREMENT PRIMARY KEY,
+    receipt_code VARCHAR(50) NOT NULL UNIQUE,
+
+    total_amount DOUBLE NOT NULL DEFAULT 0,
+    discount DOUBLE DEFAULT 0,
+    grand_total DOUBLE NOT NULL DEFAULT 0,   -- total - discount
+
+    created_by INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
+-- ================================
+-- RECEIPT ITEMS (ITEMS OF THAT RECEIPT)
+-- ================================
+CREATE TABLE receipt_items (
+    ri_id INT AUTO_INCREMENT PRIMARY KEY,
+    receipt_code VARCHAR(50) NOT NULL,
+
+    item_id INT NOT NULL,
+    qty DOUBLE NOT NULL,
+    price DOUBLE NOT NULL,              -- unit price at time of sale
+    total DOUBLE NOT NULL,              -- qty * price
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (item_id) REFERENCES tbl_items(item_id),
+    FOREIGN KEY (receipt_code) REFERENCES receipts(receipt_code)
+);
