@@ -1,0 +1,396 @@
+@import url("./color.css");
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(
+    135deg,
+    var(--blue-dark) 0%,
+    var(--blue-mid) 100%
+  );
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 500px;
+  overflow: hidden;
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Progress Steps */
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  padding: 30px 40px 20px;
+  position: relative;
+}
+
+.progress-steps::before {
+  content: "";
+  position: absolute;
+  top: 50px;
+  left: 40px;
+  right: 40px;
+  height: 2px;
+  background: var(--gray-light);
+  z-index: 0;
+}
+
+.progress-line {
+  position: absolute;
+  top: 50px;
+  left: 40px;
+  height: 2px;
+  background: var(--blue);
+  z-index: 1;
+  transition: width 0.4s ease;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gray-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-dark);
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.step.active .step-circle {
+  background: var(--blue);
+  color: var(--white);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+.step.completed .step-circle {
+  background: var(--green);
+  color: var(--white);
+}
+
+.step-label {
+  font-size: 12px;
+  color: var(--gray-dark);
+  text-align: center;
+}
+
+.step.active .step-label {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+/* Form Content */
+.form-content {
+  padding: 30px 40px 40px;
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tab-title {
+  font-size: 20px;
+  color: var(--blue-dark);
+  margin-bottom: 10px;
+}
+
+.tab-description {
+  color: var(--gray-dark);
+  font-size: 14px;
+  margin-bottom: 25px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--blue-dark);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-wrapper i {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-mid);
+  font-size: 16px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 14px 15px 14px 45px;
+  border: 2px solid var(--gray-light);
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.3s;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-control:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* OTP Input */
+.otp-container {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.otp-input {
+  width: 50px;
+  height: 55px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  border: 2px solid var(--gray-light);
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.otp-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* Password Requirements */
+.password-requirements {
+  background: var(--light-bg);
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 15px;
+  font-size: 13px;
+}
+
+.requirement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--gray-dark);
+}
+
+.requirement:last-child {
+  margin-bottom: 0;
+}
+
+.requirement i {
+  width: 16px;
+  font-size: 12px;
+}
+
+.requirement.met {
+  color: var(--green);
+}
+
+.requirement.met i {
+  color: var(--green);
+}
+
+.requirement.unmet i {
+  color: var(--gray-mid);
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: var(--white);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--blue-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn .spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--white);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+
+.btn.loading .spinner {
+  display: inline-block;
+}
+
+.btn.loading .btn-text {
+  display: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.back-to-login {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--gray-dark);
+}
+
+.back-to-login a {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s;
+}
+
+.back-to-login a:hover {
+  color: var(--blue-hover);
+  text-decoration: underline;
+}
+
+.resend-code {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 13px;
+  color: var(--gray-dark);
+}
+
+.resend-code button {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 13px;
+}
+
+.resend-code button:hover {
+  color: var(--blue-hover);
+}
+
+.resend-code button:disabled {
+  color: var(--gray-mid);
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container {
+    max-width: 100%;
+  }
+
+  .progress-steps {
+    padding: 25px 20px 15px;
+  }
+
+  .progress-steps::before {
+    left: 20px;
+    right: 20px;
+  }
+
+  .progress-line {
+    left: 20px;
+  }
+
+  .step-circle {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+
+  .step-label {
+    font-size: 10px;
+  }
+
+  .form-content {
+    padding: 25px 20px 30px;
+  }
+
+  .otp-input {
+    width: 45px;
+    height: 50px;
+    font-size: 20px;
+  }
+}

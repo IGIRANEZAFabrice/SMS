@@ -1,0 +1,31 @@
+:root {
+  /* Primary colors */
+  --blue: #3b82f6;
+  --blue-dark: #1e293b;
+  --blue-mid: #334155;
+  --blue-hover: #2563eb;
+  --white: #fff;
+  --light-bg: #f1f5f9;
+
+  /* Gray shades */
+  --gray-light: #cbd5e1;
+  --gray-mid: #94a3b8;
+  --gray-dark: #64748b;
+  --gray-darker: #475569;
+
+  /* Stat card colors */
+  --blue-light: #eff6ff;
+  --blue-text: #1e40af;
+  --green-light: #f0fdf4;
+  --green-text: #166534;
+  --orange-light: #fff7ed;
+  --orange-text: #9a3412;
+
+  /* Red / warning */
+  --red: #ef4444;
+  --red-light: #fee2e2;
+
+  /* Shadows */
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-dropdown: rgba(0, 0, 0, 0.15);
+}
