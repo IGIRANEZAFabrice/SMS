@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Purchase Request</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --blue: #3b82f6;
+            --blue-dark: #1e293b;
+            --blue-mid: #334155;
+            --blue-hover: #2563eb;
+            --white: #fff;
+            --light-bg: #f1f5f9;
+            --gray-light: #cbd5e1;
+            --gray-mid: #94a3b8;
+            --gray-dark: #64748b;
+            --gray-darker: #475569;
+            --blue-light: #eff6ff;
+            --blue-text: #1e40af;
+            --green-light: #f0fdf4;
+            --green-text: #166534;
+            --orange-light: #fff7ed;
+            --orange-text: #9a3412;
+            --red: #ef4444;
+            --red-light: #fee2e2;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-dropdown: rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--light-bg);
+            color: var(--blue-dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: var(--green-light);
+            color: var(--green-text);
+            border: 1px solid var(--green-text);
+        }
+
+        .alert-error {
+            background: var(--red-light);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Page Header */
+        .page-header {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px var(--shadow-light);
+            margin-bottom: 25px;
+        }
+
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 26px;
+            color: var(--blue-dark);
+            margin-bottom: 8px;
+        }
+
+        .page-title i {
+            color: var(--blue);
+        }
+
+        .page-subtitle {
+            color: var(--gray-dark);
+            font-size: 14px;
+        }
+
+        /* Form Layout */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+        }
+
+        /* Form Section */
+        .form-section {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px var(--shadow-light);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--blue-dark);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gray-light);
+        }
+
+        .section-title i {
+            color: var(--blue);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--blue-dark);
+            font-size: 14px;
+        }
+
+        .form-label i {
+            color: var(--blue);
+            margin-right: 5px;
+        }
+
+        .required {
+            color: var(--red);
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--gray-light);
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border 0.3s;
+            font-family: inherit;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--blue);
+        }
+
+        .form-input:disabled {
+            background: var(--light-bg);
+            cursor: not-allowed;
+        }
+
+        /* Items Selection */
+        .items-search {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-mid);
+        }
+
+        .items-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 2px solid var(--gray-light);
+            border-radius: 8px;
+        }
+
+        .item-option {
+            padding: 15px;
+            border-bottom: 1px solid var(--gray-light);
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-option:hover {
+            background: var(--blue-light);
+        }
+
+        .item-option:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--blue-dark);
+            margin-bottom: 4px;
+        }
+
+        .item-stock {
+            font-size: 13px;
+            color: var(--gray-dark);
+        }
+
+        .item-add-btn {
+            background: var(--blue);
+            color: var(--white);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .item-add-btn:hover {
+            background: var(--blue-hover);
+        }
+
+        /* Selected Items */
+        .selected-items {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px var(--shadow-light);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .selected-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--gray-light);
+        }
+
+        .selected-count {
+            background: var(--blue);
+            color: var(--white);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .selected-items-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .selected-item {
+            background: var(--light-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .selected-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .selected-item-name {
+            font-weight: 600;
+            color: var(--blue-dark);
+            flex: 1;
+        }
+
+        .remove-btn {
+            background: var(--red);
+            color: var(--white);
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .remove-btn:hover {
+            background: #dc2626;
+        }
+
+        .qty-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-label {
+            color: var(--gray-dark);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .qty-input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid var(--gray-light);
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray-mid);
+        }
+
+        .empty-state i {
+            font-size: 60px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--blue-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow-dropdown);
+        }
+
+        .btn-secondary {
+            background: var(--gray-light);
+            color: var(--blue-dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-mid);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .selected-items {
+                position: relative;
+                top: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 10px;
+            }
+
+            .page-header,
+            .form-section,
+            .selected-items {
+                padding: 15px;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Alert -->
+        <div id="alert" class="alert"></div>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-plus-circle"></i>
+                Create Purchase Request
+            </h1>
+            <p class="page-subtitle">Fill in the details below to create a new purchase request</p>
+        </div>
+
+        <!-- Form Grid -->
+        <div class="form-grid">
+            <!-- Left: Form Details -->
+            <div>
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <h3 class="section-title">
+                        <i class="fas fa-info-circle"></i>
+                        Basic Information
+                    </h3>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-truck"></i>
+                            Supplier <span class="required">*</span>
+                        </label>
+                        <select class="form-select" id="supplierSelect" required>
+                            <option value="">-- Select Supplier --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-calendar"></i>
+                            Request Date <span class="required">*</span>
+                        </label>
+                        <input type="date" class="form-input" id="requestDate" required>
+                    </div>
+                </div>
+
+                <!-- Items Selection -->
+                <div class="form-section" style="margin-top: 20px;">
+                    <h3 class="section-title">
+                        <i class="fas fa-boxes"></i>
+                        Select Items
+                    </h3>
+
+                    <div class="items-search">
+                        <input type="text" class="form-input" id="itemSearch" placeholder="Search items...">
+                        <span class="search-icon"><i class="fas fa-search"></i></span>
+                    </div>
+
+                    <div class="items-list" id="itemsList">
+                        <!-- Items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Selected Items -->
+            <div class="selected-items">
+                <div class="selected-header">
+                    <h3 style="font-size: 18px; color: var(--blue-dark);">
+                        <i class="fas fa-shopping-cart"></i> Selected Items
+                    </h3>
+                    <span class="selected-count" id="selectedCount">0</span>
+                </div>
+
+                <div class="selected-items-list" id="selectedItemsList">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No items selected</p>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="submitBtn" disabled>
+                    <i class="fas fa-paper-plane"></i> Submit Request
+                </button>
+                <button class="btn btn-secondary" id="clearBtn">
+                    <i class="fas fa-redo"></i> Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data - Replace with PHP/MySQL fetch later
+        let suppliers = [
+            {supplier_id: 1, name: 'Tech Suppliers Ltd'},
+            {supplier_id: 2, name: 'Office Supplies Co'},
+            {supplier_id: 3, name: 'Electronics Hub'},
+            {supplier_id: 4, name: 'Hardware Store Inc'}
+        ];
+
+        let items = [
+            {item_id: 1, name: 'Laptop Dell XPS', stock: 15},
+            {item_id: 2, name: 'iPhone 14 Pro', stock: 8},
+            {item_id: 3, name: 'Samsung Galaxy S23', stock: 12},
+            {item_id: 4, name: 'iPad Air', stock: 20},
+            {item_id: 5, name: 'AirPods Pro', stock: 3},
+            {item_id: 6, name: 'Magic Mouse', stock: 25},
+            {item_id: 7, name: 'Mechanical Keyboard', stock: 10},
+            {item_id: 8, name: 'USB-C Hub', stock: 30},
+            {item_id: 9, name: 'Webcam HD', stock: 18},
+            {item_id: 10, name: 'Wireless Charger', stock: 40}
+        ];
+
+        let selectedItems = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSuppliers();
+            loadItems();
+            setupEventListeners();
+            setDefaultDate();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('itemSearch').addEventListener('input', filterItems);
+            document.getElementById('submitBtn').addEventListener('click', submitRequest);
+            document.getElementById('clearBtn').addEventListener('click', clearAll);
+        }
+
+        function setDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('requestDate').value = today;
+        }
+
+        function loadSuppliers() {
+            const select = document.getElementById('supplierSelect');
+            suppliers.forEach(supplier => {
+                const option = document.createElement('option');
+                option.value = supplier.supplier_id;
+                option.textContent = supplier.name;
+                select.appendChild(option);
+            });
+        }
+
+        function loadItems(filter = '') {
+            const itemsList = document.getElementById('itemsList');
+            const filteredItems = items.filter(item => 
+                item.name.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            if (filteredItems.length === 0) {
+                itemsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>No items found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            itemsList.innerHTML = filteredItems.map(item => {
+                const isAdded = selectedItems.some(si => si.item_id === item.item_id);
+                return `
+                    <div class="item-option">
+                        <div class="item-info">
+                            <div class="item-name"><i class="fas fa-box"></i> ${item.name}</div>
+                            <div class="item-stock">Current Stock: ${item.stock}</div>
+                        </div>
+                        <button class="item-add-btn" onclick="addItem(${item.item_id})" ${isAdded ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                            <i class="fas ${isAdded ? 'fa-check' : 'fa-plus'}"></i>
+                            ${isAdded ? 'Added' : 'Add'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterItems() {
+            const searchTerm = document.getElementById('itemSearch').value;
+            loadItems(searchTerm);
+        }
+
+        function addItem(itemId) {
+            const item = items.find(i => i.item_id === itemId);
+            if (!item) return;
+
+            const exists = selectedItems.some(si => si.item_id === itemId);
+            if (exists) {
+                showAlert('Item already added', 'error');
+                return;
+            }
+
+            selectedItems.push({
+                item_id: item.item_id,
+                name: item.name,
+                qty_requested: 1
+            });
+
+            updateSelectedItems();
+            loadItems(document.getElementById('itemSearch').value);
+            showAlert(`${item.name} added`, 'success');
+        }
+
+        function updateSelectedItems() {
+            const container = document.getElementById('selectedItemsList');
+            const count = document.getElementById('selectedCount');
+            const submitBtn = document.getElementById('submitBtn');
+
+            count.textContent = selectedItems.length;
+
+            if (selectedItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No items selected</p>
+                    </div>
+                `;
+                submitBtn.disabled = true;
+            } else {
+                container.innerHTML = selectedItems.map((item, index) => `
+                    <div class="selected-item">
+                        <div class="selected-item-header">
+                            <span class="selected-item-name">${item.name}</span>
+                            <button class="remove-btn" onclick="removeItem(${index})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="qty-input-group">
+                            <span class="qty-label">Quantity:</span>
+                            <input type="number" class="qty-input" value="${item.qty_requested}" 
+                                   min="1" onchange="updateQty(${index}, this.value)">
+                        </div>
+                    </div>
+                `).join('');
+                submitBtn.disabled = false;
+            }
+        }
+
+        function updateQty(index, value) {
+            const qty = parseInt(value) || 1;
+            selectedItems[index].qty_requested = qty < 1 ? 1 : qty;
+            updateSelectedItems();
+        }
+
+        function removeItem(index) {
+            selectedItems.splice(index, 1);
+            updateSelectedItems();
+            loadItems(document.getElementById('itemSearch').value);
+            showAlert('Item removed', 'success');
+        }
+
+        function clearAll() {
+            if (selectedItems.length === 0) return;
+            
+            if (confirm('Clear all selected items?')) {
+                selectedItems = [];
+                updateSelectedItems();
+                loadItems();
+                document.getElementById('itemSearch').value = '';
+                showAlert('All items cleared', 'success');
+            }
+        }
+
+        function submitRequest() {
+            const supplierId = document.getElementById('supplierSelect').value;
+            const requestDate = document.getElementById('requestDate').value;
+
+            if (!supplierId) {
+                showAlert('Please select a supplier', 'error');
+                return;
+            }
+
+            if (!requestDate) {
+                showAlert('Please select a request date', 'error');
+                return;
+            }
+
+            if (selectedItems.length === 0) {
+                showAlert('Please add at least one item', 'error');
+                return;
+            }
+
+            // Prepare data for PHP/MySQL
+            const requestData = {
+                supplier_id: supplierId,
+                request_date: requestDate,
+                status: 'pending',
+                created_by: 1, // Replace with actual user ID from session
+                items: selectedItems
+            };
+
+            console.log('Purchase Request Data:', requestData);
+
+            /* 
+            TODO: Send to PHP via fetch/AJAX
+            fetch('create_purchase_request.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    showAlert('Purchase request created successfully!', 'success');
+                    // Reset form
+                    document.getElementById('supplierSelect').value = '';
+                    document.getElementById('itemSearch').value = '';
+                    selectedItems = [];
+                    updateSelectedItems();
+                    loadItems();
+                    setDefaultDate();
+                }
+            });
+            */
+
+            // Mock success
+            setTimeout(() => {
+                showAlert('Purchase request created successfully! Request ID: #' + Math.floor(Math.random() * 1000), 'success');
+                
+                // Reset form
+                document.getElementById('supplierSelect').value = '';
+                document.getElementById('itemSearch').value = '';
+                selectedItems = [];
+                updateSelectedItems();
+                loadItems();
+            }, 500);
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cost of Goods Sold (COGS) Report</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+      :root {
+        --blue: #3b82f6;
+        --blue-dark: #1e293b;
+        --blue-mid: #334155;
+        --blue-hover: #2563eb;
+        --white: #fff;
+        --light-bg: #f1f5f9;
+        --gray-light: #cbd5e1;
+        --gray-mid: #94a3b8;
+        --gray-dark: #64748b;
+        --gray-darker: #475569;
+        --red: #ef4444;
+        --green: #10b981;
+        --orange: #f59e0b;
+        --purple: #8b5cf6;
+        --yellow: #fbbf24;
+        --shadow-light: rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--light-bg);
+      }
+
+      .page-header {
+        background: var(--white);
+        padding: 25px 30px;
+        box-shadow: 0 2px 4px var(--shadow-light);
+        margin-bottom: 30px;
+      }
+
+      .page-header h1 {
+        font-size: 28px;
+        color: var(--blue-dark);
+        margin-bottom: 5px;
+      }
+
+      .page-header p {
+        color: var(--gray-dark);
+        font-size: 14px;
+      }
+
+      .container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 0 30px 30px;
+      }
+
+      /* Filters */
+      .filters-card {
+        background: var(--white);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px var(--shadow-light);
+        padding: 25px;
+        margin-bottom: 30px;
+      }
+
+      .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        align-items: end;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group label {
+        margin-bottom: 8px;
+        color: var(--blue-dark);
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .form-control {
+        padding: 10px 14px;
+        border: 2px solid var(--gray-light);
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.3s;
+        outline: none;
+        font-family: inherit;
+      }
+
+      .form-control:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      select.form-control {
+        cursor: pointer;
+      }
+
+      .btn {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-primary {
+        background: var(--blue);
+        color: var(--white);
+      }
+
+      .btn-primary:hover {
+        background: var(--blue-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      }
+
+      .btn-success {
+        background: var(--green);
+        color: var(--white);
+      }
+
+      .btn-success:hover {
+        background: #059669;
+      }
+
+      /* Stats */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: var(--white);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px var(--shadow-light);
+      }
+
+      .stat-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 15px;
+      }
+
+      .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+      }
+
+      .stat-icon.red {
+        background: #fee2e2;
+        color: var(--red);
+      }
+
+      .stat-icon.green {
+        background: #f0fdf4;
+        color: var(--green);
+      }
+
+      .stat-icon.blue {
+        background: #eff6ff;
+        color: var(--blue);
+      }
+
+      .stat-icon.purple {
+        background: #f5f3ff;
+        color: var(--purple);
+      }
+
+      .stat-icon.orange {
+        background: #fff7ed;
+        color: var(--orange);
+      }
+
+      .stat-title {
+        font-size: 13px;
+        color: var(--gray-dark);
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--blue-dark);
+        margin-bottom: 5px;
+      }
+
+      .stat-change {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .stat-change.positive {
+        color: var(--green);
+      }
+
+      .stat-change.negative {
+        color: var(--red);
+      }
+
+      /* Cards */
+      .card {
+        background: var(--white);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px var(--shadow-light);
+        padding: 25px;
+        margin-bottom: 25px;
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .card-title {
+        font-size: 20px;
+        color: var(--blue-dark);
+        font-weight: 600;
+      }
+
+      /* Chart Container */
+      .chart-container {
+        position: relative;
+        height: 350px;
+        margin-bottom: 20px;
+      }
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+      }
+
+      /* Table */
+      .table-container {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th {
+        background: var(--light-bg);
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--blue-dark);
+        font-size: 14px;
+        border-bottom: 2px solid var(--gray-light);
+      }
+
+      th.text-right {
+        text-align: right;
+      }
+
+      td {
+        padding: 12px;
+        border-bottom: 1px solid var(--gray-light);
+        color: var(--gray-darker);
+        font-size: 14px;
+      }
+
+      td.text-right {
+        text-align: right;
+      }
+
+      tr:hover {
+        background: var(--light-bg);
+      }
+
+      .item-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .item-image {
+        width: 40px;
+        height: 40px;
+        background: var(--light-bg);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--blue);
+        font-size: 18px;
+      }
+
+      .profit-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .profit-badge.high {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .profit-badge.medium {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .profit-badge.low {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .profit-badge.loss {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-mid);
+      }
+
+      .empty-state i {
+        font-size: 64px;
+        margin-bottom: 15px;
+        opacity: 0.5;
+      }
+
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--gray-light);
+      }
+
+      .tab-btn {
+        padding: 12px 20px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: var(--gray-dark);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        bottom: -2px;
+      }
+
+      .tab-btn:hover {
+        color: var(--blue);
+      }
+
+      .tab-btn.active {
+        color: var(--blue);
+        border-bottom-color: var(--blue);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .container {
+          padding: 0 15px 20px;
+        }
+
+        .page-header {
+          padding: 20px 15px;
+        }
+
+        .page-header h1 {
+          font-size: 22px;
+        }
+
+        .filters-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .charts-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .chart-container {
+          height: 300px;
+        }
+
+        .table-container {
+          overflow-x: scroll;
+        }
+
+        table {
+          min-width: 800px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-header">
+      <h1><i class="fas fa-chart-line"></i> Cost of Goods Sold (COGS) Report</h1>
+      <p>Comprehensive analysis of sales costs, revenue, and profitability</p>
+    </div>
+
+    <div class="container">
+      <!-- Filters -->
+      <div class="filters-card">
+        <div class="filters-grid">
+          <div class="form-group">
+            <label><i class="fas fa-calendar"></i> Date From</label>
+            <input type="date" class="form-control" id="dateFrom" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-calendar"></i> Date To</label>
+            <input type="date" class="form-control" id="dateTo" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-tags"></i> Category</label>
+            <select class="form-control" id="categoryFilter">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" onclick="applyFilters()">
+              <i class="fas fa-filter"></i> Apply
+            </button>
+            <button class="btn btn-success" onclick="exportReport()">
+              <i class="fas fa-file-excel"></i> Export
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon green">
+              <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="stat-title">Total Revenue</div>
+          </div>
+          <div class="stat-value" id="totalRevenue">$0.00</div>
+          <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i> <span id="revenueChange">0%</span> from last period
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon red">
+              <i class="fas fa-shopping-cart"></i>
+            </div>
+            <div class="stat-title">Total COGS</div>
+          </div>
+          <div class="stat-value" id="totalCOGS">$0.00</div>
+          <div class="stat-change negative">
+            <i class="fas fa-arrow-up"></i> <span id="cogsChange">0%</span> from last period
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon blue">
+              <i class="fas fa-chart-pie"></i>
+            </div>
+            <div class="stat-title">Gross Profit</div>
+          </div>
+          <div class="stat-value" id="grossProfit">$0.00</div>
+          <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i> <span id="profitChange">0%</span> margin
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon purple">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-title">Profit Margin</div>
+          </div>
+          <div class="stat-value" id="profitMargin">0%</div>
+          <div class="stat-change positive">
+            <i class="fas fa-check-circle"></i> <span id="marginStatus">Healthy</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon orange">
+              <i class="fas fa-receipt"></i>
+            </div>
+            <div class="stat-title">Total Receipts</div>
+          </div>
+          <div class="stat-value" id="totalReceipts">0</div>
+          <div class="stat-change">
+            <i class="fas fa-file-invoice"></i> <span id="avgReceiptValue">$0.00</span> average
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Revenue vs COGS Trend</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="revenueVsCOGSChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Profit Margin by Category</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="profitByCategoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Reports -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Detailed COGS Analysis</h3>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('by-receipt')">
+            <i class="fas fa-receipt"></i> By Receipt
+          </button>
+          <button class="tab-btn" onclick="switchTab('by-item')">
+            <i class="fas fa-box"></i> By Item
+          </button>
+          <button class="tab-btn" onclick="switchTab('by-category')">
+            <i class="fas fa-tags"></i> By Category
+          </button>
+        </div>
+
+        <!-- By Receipt Tab -->
+        <div class="tab-content active" id="by-receiptTab">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Receipt Code</th>
+                  <th>Date</th>
+                  <th>Items Sold</th>
+                  <th class="text-right">Total Revenue</th>
+                  <th class="text-right">Total COGS</th>
+                  <th class="text-right">Gross Profit</th>
+                  <th class="text-right">Margin %</th>
+                  <th>Created By</th>
+                </tr>
+              </thead>
+              <tbody id="receiptTableBody">
+                <!-- Data will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- By Item Tab -->
+        <div class="tab-content" id="by-itemTab">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Item Name</th>
+                  <th>Category</th>
+                  <th class="text-right">Qty Sold</th>
+                  <th class="text-right">Avg Sale Price</th>
+                  <th class="text-right">Avg Cost Price</th>
+                  <th class="text-right">Total Revenue</th>
+                  <th class="text-right">Total COGS</th>
+                  <th class="text-right">Gross Profit</th>
+                  <th>Margin</th>
+                </tr>
+              </thead>
+              <tbody id="itemTableBody">
+                <!-- Data will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- By Category Tab -->
+        <div class="tab-content" id="by-categoryTab">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th class="text-right">Items Sold</th>
+                  <th class="text-right">Qty Sold</th>
+                  <th class="text-right">Total Revenue</th>
+                  <th class="text-right">Total COGS</th>
+                  <th class="text-right">Gross Profit</th>
+                  <th class="text-right">Margin %</th>
+                  <th>Performance</th>
+                </tr>
+              </thead>
+              <tbody id="categoryTableBody">
+                <!-- Data will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Sample data
+      const categories = [
+        { cat_id: 1, cat_name: "Electronics" },
+        { cat_id: 2, cat_name: "Hardware" },
+        { cat_id: 3, cat_name: "Tools" }
+      ];
+
+      const items = [
+        { item_id: 1, item_name: "Laptop Battery", cat_id: 1, item_unit: "PCS", cost_price: 40.00, sale_price: 50.00 },
+        { item_id: 2, item_name: "Screwdriver Set", cat_id: 3, item_unit: "SET", cost_price: 18.00, sale_price: 25.00 },
+        { item_id: 3, item_name: "Power Supply", cat_id: 1, item_unit: "PCS", cost_price: 65.00, sale_price: 80.00 },
+        { item_id: 4, item_name: "Wrench Set", cat_id: 3, item_unit: "SET", cost_price: 25.00, sale_price: 35.00 },
+        { item_id: 5, item_name: "LED Light", cat_id: 1, item_unit: "PCS", cost_price: 10.00, sale_price: 15.00 }
+      ];
+
+      const users = [
+        { user_id: 1, fullname: "John Doe" },
+        { user_id: 2, fullname: "Jane Smith" }
+      ];
+
+      // Receipts data
+      const receipts = [
+        { receipt_id: 1, receipt_code: "RC-001", created_at: "2024-01-15 10:30:00", created_by: 1 },
+        { receipt_id: 2, receipt_code: "RC-002", created_at: "2024-01-18 14:20:00", created_by: 2 },
+        { receipt_id: 3, receipt_code: "RC-003", created_at: "2024-02-05 09:15:00", created_by: 1 },
+        { receipt_id: 4, receipt_code: "RC-004", created_at: "2024-02-12 16:45:00", created_by: 2 },
+        { receipt_id: 5, receipt_code: "RC-005", created_at: "2024-03-01 11:00:00", created_by: 1 }
+      ];
+
+      // Receipt items (sold items)
+      const receiptItems = [
+        { ri_id: 1, receipt_code: "RC-001", item_id: 1, qty: 5, price: 50.00 },
+        { ri_id: 2, receipt_code: "RC-001", item_id: 3, qty: 3, price: 80.00 },
+        { ri_id: 3, receipt_code: "RC-002", item_id: 2, qty: 10, price: 25.00 },
+        { ri_id: 4, receipt_code: "RC-003", item_id: 5, qty: 20, price: 15.00 },
+        { ri_id: 5, receipt_code: "RC-003", item_id: 1, qty: 8, price: 50.00 },
+        { ri_id: 6, receipt_code: "RC-004", item_id: 4, qty: 5, price: 35.00 },
+        { ri_id: 7, receipt_code: "RC-004", item_id: 3, qty: 2, price: 80.00 },
+        { ri_id: 8, receipt_code: "RC-005", item_id: 1, qty: 12, price: 50.00 },
+        { ri_id: 9, receipt_code: "RC-005", item_id: 2, qty: 7, price: 25.00 }
+      ];
+
+      let revenueVsCOGSChart, profitByCategoryChart;
+
+      // Initialize
+      function init() {
+        loadCategoryFilter();
+        calculateStatistics();
+        loadCharts();
+        loadReceiptTable();
+        loadItemTable();
+        loadCategoryTable();
+      }
+
+      // Load category filter
+      function loadCategoryFilter() {
+        const select = document.getElementById("categoryFilter");
+        categories.forEach(cat => {
+          select.innerHTML += `<option value="${cat.cat_id}">${cat.cat_name}</option>`;
+        });
+      }
+
+      // Calculate statistics
+      function calculateStatistics() {
+        let totalRevenue = 0;
+        let totalCOGS = 0;
+
+        receiptItems.forEach(ri => {
+          const item = items.find(i => i.item_id === ri.item_id);
+          if (item) {
+            totalRevenue += ri.qty * ri.price;
+            totalCOGS += ri.qty * item.cost_price;
+          }
+        });
+
+        const grossProfit = totalRevenue - totalCOGS;
+        const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100) : 0;
+        const avgReceiptValue = receipts.length > 0 ? totalRevenue / receipts.length : 0;
+
+        document.getElementById("totalRevenue").textContent = `$${totalRevenue.toFixed(2)}`;
+        document.getElementById("totalCOGS").textContent = `$${totalCOGS.toFixed(2)}`;
+        document.getElementById("grossProfit").textContent = `$${grossProfit.toFixed(2)}`;
+        document.getElementById("profitMargin").textContent = `${profitMargin.toFixed(1)}%`;
+        document.getElementById("totalReceipts").textContent = receipts.length;
+        document.getElementById("avgReceiptValue").textContent = `$${avgReceiptValue.toFixed(2)}`;
+
+        // Update change indicators (sample percentages)
+        document.getElementById("revenueChange").textContent = "12.5%";
+        document.getElementById("cogsChange").textContent = "8.3%";
+        document.getElementById("profitChange").textContent = `${profitMargin.toFixed(1)}%`;
+        document.getElementById("marginStatus").textContent = profitMargin > 30 ? "Excellent" : profitMargin > 20 ? "Healthy" : "Fair";
+      }
+
+      // Load charts
+      function loadCharts() {
+        // Revenue vs COGS Chart
+        const ctx1 = document.getElementById("revenueVsCOGSChart").getContext("2d");
+        revenueVsCOGSChart = new Chart(ctx1, {
+          type: "line",
+          data: {
+            labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+            datasets: [
+              {
+                label: "Revenue",
+                data: [1250, 1480, 1920, 1650, 2100, 2300],
+                borderColor: "#10b981",
+                backgroundColor: "rgba(16, 185, 129, 0.1)",
+                tension: 0.4,
+                fill: true
+              },
+              {
+                label: "COGS",
+                data: [850, 1020, 1350, 1180, 1500, 1650],
+                borderColor: "#ef4444",
+                backgroundColor: "rgba(239, 68, 68, 0.1)",
+                tension: 0.4,
+                fill: true
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "top"
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return "$" + value;
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        // Profit by Category Chart
+        const categoryData = calculateCategoryStats();
+        const ctx2 = document.getElementById("profitByCategoryChart").getContext("2d");
+        profitByCategoryChart = new Chart(ctx2, {
+          type: "bar",
+          data: {
+            labels: categoryData.map(c => c.categoryName),
+            datasets: [
+              {
+                label: "Gross Profit",
+                data: categoryData.map(c => c.profit),
+                backgroundColor: ["#3b82f6", "#10b981", "#f59e0b"],
+                borderRadius: 8
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return "$" + value;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Calculate category statistics
+      function calculateCategoryStats() {
+        const categoryStats = {};
+
+        categories.forEach(cat => {
+          categoryStats[cat.cat_id] = {
+            categoryName: cat.cat_name,
+            revenue: 0,
+            cogs: 0,
+            profit: 0,
+            qtySold: 0
+          };
+        });
+
+        receiptItems.forEach(ri => {
+          const item = items.find(i => i.item_id === ri.item_id);
+          if (item) {
+            const revenue = ri.qty * ri.price;
+            const cogs = ri.qty * item.cost_price;
+            const profit = revenue - cogs;
+
+            categoryStats[item.cat_id].revenue += revenue;
+            categoryStats[item.cat_id].cogs += cogs;
+            categoryStats[item.cat_id].profit += profit;
+            categoryStats[item.cat_id].qtySold += ri.qty;
+          }
+        });
+
+        return Object.values(categoryStats);
+      }
+
+      // Load receipt table
+      function loadReceiptTable() {
+        const tbody = document.getElementById("receiptTableBody");
+        tbody.innerHTML = "";
+
+        receipts.forEach(receipt => {
+          const items = receiptItems.filter(ri => ri.receipt_code === receipt.receipt_code);
+          let totalRevenue = 0;
+          let totalCOGS = 0;
+
+          items.forEach(ri => {
+            const item = items.find(i => i.item_id === ri.item_id);
+            if (item) {
+              totalRevenue += ri.qty * ri.price;
+              totalCOGS += ri.qty * item.cost_price;
+            }
+          });
+
+          const grossProfit = totalRevenue - totalCOGS;
+          const margin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100) : 0;
+          const user = users.find(u => u.user_id === receipt.created_by);
+
+          tbody.innerHTML += `
+            <tr>
+              <td><strong>${receipt.receipt_code}</strong></td>
+              <td>${new Date(receipt.created_at).toLocaleDateString()}</td>
+              <td>${items.length} item(s)</td>
+              <td class="text-right"><strong>${totalRevenue.toFixed(2)}</strong></td>
+              <td class="text-right">${totalCOGS.toFixed(2)}</td>
+              <td class="text-right" style="color: ${grossProfit > 0 ? 'var(--green)' : 'var(--red)'}"><strong>${grossProfit.toFixed(2)}</strong></td>
+              <td class="text-right">${margin.toFixed(1)}%</td>
+              <td>${user ? user.fullname : 'N/A'}</td>
+            </tr>
+          `;
+        });
+      }
+
+      // Load item table
+      function loadItemTable() {
+        const tbody = document.getElementById("itemTableBody");
+        tbody.innerHTML = "";
+
+        const itemStats = {};
+
+        // Calculate stats for each item
+        items.forEach(item => {
+          itemStats[item.item_id] = {
+            item: item,
+            qtySold: 0,
+            totalRevenue: 0,
+            totalCOGS: 0,
+            totalSalePrice: 0,
+            saleCount: 0
+          };
+        });
+
+        receiptItems.forEach(ri => {
+          const item = items.find(i => i.item_id === ri.item_id);
+          if (item && itemStats[ri.item_id]) {
+            itemStats[ri.item_id].qtySold += ri.qty;
+            itemStats[ri.item_id].totalRevenue += ri.qty * ri.price;
+            itemStats[ri.item_id].totalCOGS += ri.qty * item.cost_price;
+            itemStats[ri.item_id].totalSalePrice += ri.price;
+            itemStats[ri.item_id].saleCount++;
+          }
+        });
+
+        Object.values(itemStats).forEach(stat => {
+          if (stat.qtySold > 0) {
+            const avgSalePrice = stat.totalSalePrice / stat.saleCount;
+            const grossProfit = stat.totalRevenue - stat.totalCOGS;
+            const margin = stat.totalRevenue > 0 ? (grossProfit / stat.totalRevenue * 100) : 0;
+            const category = categories.find(c => c.cat_id === stat.item.cat_id);
+
+            let marginBadge;
+            if (margin >= 40) {
+              marginBadge = '<span class="profit-badge high">High</span>';
+            } else if (margin >= 25) {
+              marginBadge = '<span class="profit-badge medium">Medium</span>';
+            } else if (margin >= 10) {
+              marginBadge = '<span class="profit-badge low">Low</span>';
+            } else {
+              marginBadge = '<span class="profit-badge loss">Loss</span>';
+            }
+
+            tbody.innerHTML += `
+              <tr>
+                <td>
+                  <div class="item-row">
+                    <div class="item-image"><i class="fas fa-box"></i></div>
+                    <strong>${stat.item.item_name}</strong>
+                  </div>
+                </td>
+                <td>${category ? category.cat_name : 'N/A'}</td>
+                <td class="text-right"><strong>${stat.qtySold}</strong> ${stat.item.item_unit}</td>
+                <td class="text-right">${avgSalePrice.toFixed(2)}</td>
+                <td class="text-right">${stat.item.cost_price.toFixed(2)}</td>
+                <td class="text-right"><strong>${stat.totalRevenue.toFixed(2)}</strong></td>
+                <td class="text-right">${stat.totalCOGS.toFixed(2)}</td>
+                <td class="text-right" style="color: ${grossProfit > 0 ? 'var(--green)' : 'var(--red)'}"><strong>${grossProfit.toFixed(2)}</strong></td>
+                <td>${marginBadge} ${margin.toFixed(1)}%</td>
+              </tr>
+            `;
+          }
+        });
+
+        if (tbody.innerHTML === "") {
+          tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-box"></i><h3>No Sales Data</h3></div></td></tr>';
+        }
+      }
+
+      // Load category table
+      function loadCategoryTable() {
+        const tbody = document.getElementById("categoryTableBody");
+        tbody.innerHTML = "";
+
+        const categoryStats = calculateCategoryStats();
+
+        categoryStats.forEach(stat => {
+          const grossProfit = stat.revenue - stat.cogs;
+          const margin = stat.revenue > 0 ? (grossProfit / stat.revenue * 100) : 0;
+
+          let performance;
+          if (margin >= 35) {
+            performance = '<span class="profit-badge high">Excellent</span>';
+          } else if (margin >= 25) {
+            performance = '<span class="profit-badge medium">Good</span>';
+          } else if (margin >= 15) {
+            performance = '<span class="profit-badge low">Fair</span>';
+          } else {
+            performance = '<span class="profit-badge loss">Poor</span>';
+          }
+
+          // Count unique items sold in this category
+          const categoryItems = items.filter(i => i.cat_id === categories.find(c => c.cat_name === stat.categoryName).cat_id);
+          const soldItems = new Set();
+          receiptItems.forEach(ri => {
+            if (categoryItems.find(ci => ci.item_id === ri.item_id)) {
+              soldItems.add(ri.item_id);
+            }
+          });
+
+          tbody.innerHTML += `
+            <tr>
+              <td><strong>${stat.categoryName}</strong></td>
+              <td class="text-right">${soldItems.size}</td>
+              <td class="text-right"><strong>${stat.qtySold}</strong></td>
+              <td class="text-right"><strong>${stat.revenue.toFixed(2)}</strong></td>
+              <td class="text-right">${stat.cogs.toFixed(2)}</td>
+              <td class="text-right" style="color: ${grossProfit > 0 ? 'var(--green)' : 'var(--red)'}"><strong>${grossProfit.toFixed(2)}</strong></td>
+              <td class="text-right">${margin.toFixed(1)}%</td>
+              <td>${performance}</td>
+            </tr>
+          `;
+        });
+
+        if (tbody.innerHTML === "") {
+          tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-tags"></i><h3>No Category Data</h3></div></td></tr>';
+        }
+      }
+
+      // Switch tabs
+      function switchTab(tab) {
+        const tabs = document.querySelectorAll(".tab-btn");
+        const contents = document.querySelectorAll(".tab-content");
+
+        tabs.forEach(t => t.classList.remove("active"));
+        contents.forEach(c => c.classList.remove("active"));
+
+        event.target.closest(".tab-btn").classList.add("active");
+        document.getElementById(tab + "Tab").classList.add("active");
+      }
+
+      // Apply filters
+      function applyFilters() {
+        const dateFrom = document.getElementById("dateFrom").value;
+        const dateTo = document.getElementById("dateTo").value;
+        const categoryId = document.getElementById("categoryFilter").value;
+
+        console.log("Filters applied:", { dateFrom, dateTo, categoryId });
+        alert("Filters applied! Connect this to your backend API to filter data.");
+      }
+
+      // Export report
+      function exportReport() {
+        let csv = "COST OF GOODS SOLD (COGS) REPORT\n\n";
+        
+        // Summary
+        csv += "SUMMARY\n";
+        csv += `Total Revenue,${document.getElementById("totalRevenue").textContent}\n`;
+        csv += `Total COGS,${document.getElementById("totalCOGS").textContent}\n`;
+        csv += `Gross Profit,${document.getElementById("grossProfit").textContent}\n`;
+        csv += `Profit Margin,${document.getElementById("profitMargin").textContent}\n`;
+        csv += `Total Receipts,${document.getElementById("totalReceipts").textContent}\n\n`;
+
+        // By Receipt
+        csv += "BY RECEIPT\n";
+        csv += "Receipt Code,Date,Items,Revenue,COGS,Gross Profit,Margin %,Created By\n";
+        receipts.forEach(receipt => {
+          const items = receiptItems.filter(ri => ri.receipt_code === receipt.receipt_code);
+          let totalRevenue = 0;
+          let totalCOGS = 0;
+
+          items.forEach(ri => {
+            const item = items.find(i => i.item_id === ri.item_id);
+            if (item) {
+              totalRevenue += ri.qty * ri.price;
+              totalCOGS += ri.qty * item.cost_price;
+            }
+          });
+
+          const grossProfit = totalRevenue - totalCOGS;
+          const margin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100) : 0;
+          const user = users.find(u => u.user_id === receipt.created_by);
+
+          csv += `"${receipt.receipt_code}","${new Date(receipt.created_at).toLocaleDateString()}",${items.length},${totalRevenue.toFixed(2)},${totalCOGS.toFixed(2)},${grossProfit.toFixed(2)},${margin.toFixed(1)},"${user ? user.fullname : 'N/A'}"\n`;
+        });
+
+        // By Category
+        csv += "\n\nBY CATEGORY\n";
+        csv += "Category,Items Sold,Qty Sold,Revenue,COGS,Gross Profit,Margin %\n";
+        const categoryStats = calculateCategoryStats();
+        categoryStats.forEach(stat => {
+          const grossProfit = stat.revenue - stat.cogs;
+          const margin = stat.revenue > 0 ? (grossProfit / stat.revenue * 100) : 0;
+          csv += `"${stat.categoryName}",0,${stat.qtySold},${stat.revenue.toFixed(2)},${stat.cogs.toFixed(2)},${grossProfit.toFixed(2)},${margin.toFixed(1)}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cogs_report_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+
+      // Initialize on page load
+      init();
