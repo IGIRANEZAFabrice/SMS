@@ -1,21 +1,10 @@
-// Mock data - Replace with PHP/MySQL fetch later
-let items = [
-  { item_id: 1, name: "Laptop Dell XPS", price: 1200.0, stock: 15 },
-  { item_id: 2, name: "iPhone 14 Pro", price: 999.0, stock: 8 },
-  { item_id: 3, name: "Samsung Galaxy S23", price: 899.0, stock: 12 },
-  { item_id: 4, name: "iPad Air", price: 599.0, stock: 20 },
-  { item_id: 5, name: "AirPods Pro", price: 249.0, stock: 3 },
-  { item_id: 6, name: "Magic Mouse", price: 79.0, stock: 25 },
-  { item_id: 7, name: "Mechanical Keyboard", price: 159.0, stock: 10 },
-  { item_id: 8, name: "USB-C Hub", price: 49.0, stock: 30 },
-  { item_id: 9, name: "Webcam HD", price: 89.0, stock: 18 },
-  { item_id: 10, name: "Wireless Charger", price: 39.0, stock: 40 },
-];
+let items = [];
 
 let cart = [];
 
 // Initialize
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
+  await fetchItems();
   loadItems();
   setupEventListeners();
 });
@@ -27,6 +16,21 @@ function setupEventListeners() {
     .addEventListener("input", updateTotals);
   document.getElementById("checkoutBtn").addEventListener("click", checkout);
   document.getElementById("clearCartBtn").addEventListener("click", clearCart);
+}
+
+async function fetchItems() {
+  try {
+    const res = await fetch("../api/items.php");
+    const data = await res.json();
+    if (res.ok && data.success) {
+      items = Array.isArray(data.items) ? data.items : [];
+    } else {
+      throw new Error(data.message || "Failed to load items");
+    }
+  } catch (err) {
+    showAlert(err.message || "Error loading items", "error");
+    items = [];
+  }
 }
 
 function loadItems(filter = "") {
@@ -204,73 +208,36 @@ function updateTotals() {
   document.getElementById("checkoutBtn").disabled = cart.length === 0;
 }
 
-function checkout() {
+async function checkout() {
   if (cart.length === 0) return;
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const discount =
     parseFloat(document.getElementById("discountInput").value) || 0;
   const grandTotal = Math.max(0, subtotal - discount);
-
-  // Generate receipt code
-  const receiptCode = "RCP-" + Date.now();
-
-  // Prepare data for PHP/MySQL (this is mock - you'll send via AJAX to PHP)
-  const receiptData = {
-    receipt_code: receiptCode,
-    total_amount: subtotal,
-    discount: discount,
-    grand_total: grandTotal,
-    created_by: 1, // Replace with actual user ID from session
-    items: cart.map((item) => ({
-      item_id: item.item_id,
-      qty: item.qty,
-      price: item.price,
-      total: item.price * item.qty,
-    })),
-  };
-
-  console.log("Receipt Data to be sent to PHP:", receiptData);
-
-  /* 
-            TODO: Send to PHP via fetch/AJAX
-            fetch('process_sale.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(receiptData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.success) {
-                    showAlert('Sale completed successfully! Receipt: ' + receiptCode, 'success');
-                    // Update local stock (in PHP this will be done server-side)
-                    cart.forEach(cartItem => {
-                        const stockItem = items.find(i => i.item_id === cartItem.item_id);
-                        if(stockItem) stockItem.stock -= cartItem.qty;
-                    });
-                    cart = [];
-                    updateCart();
-                    loadItems();
-                    document.getElementById('discountInput').value = '';
-                }
-            });
-            */
-
-  // Mock success (remove this when implementing PHP)
-  setTimeout(() => {
-    showAlert(`Sale completed! Receipt: ${receiptCode}`, "success");
-
-    // Update mock stock
-    cart.forEach((cartItem) => {
-      const stockItem = items.find((i) => i.item_id === cartItem.item_id);
-      if (stockItem) stockItem.stock -= cartItem.qty;
+  try {
+    const res = await fetch("../api/checkout.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        discount,
+        items: cart.map((item) => ({ item_id: item.item_id, qty: item.qty }))
+      })
     });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Checkout failed");
+    }
 
+    showAlert(`Sale completed! Receipt: ${data.receipt_code}`, "success");
     cart = [];
     updateCart();
+    await fetchItems();
     loadItems();
     document.getElementById("discountInput").value = "";
-  }, 500);
+  } catch (err) {
+    showAlert(err.message || "Checkout error", "error");
+  }
 }
 
 function showAlert(message, type) {

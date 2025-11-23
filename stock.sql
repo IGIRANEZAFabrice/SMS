@@ -180,3 +180,7 @@ CREATE TABLE receipt_items (
     FOREIGN KEY (item_id) REFERENCES tbl_items(item_id),
     FOREIGN KEY (receipt_code) REFERENCES receipts(receipt_code)
 );
+
+
+
+ make this ga as well be connected to the databse and with a sidebar as well and refer to the db 

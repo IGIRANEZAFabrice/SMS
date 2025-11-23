@@ -64,50 +64,31 @@ loginForm.addEventListener("submit", async (e) => {
   const email = emailInput.value.trim();
   const password = passwordInput.value;
 
-  // Validation
   if (!email || !password) {
-    showNotification(
-      "warning",
-      "Missing Information",
-      "Please fill in all fields"
-    );
+    showNotification("warning", "Missing Information", "Please fill in all fields");
     return;
   }
 
-  // Disable button and show loading
   loginBtn.disabled = true;
   loginBtn.classList.add("loading");
 
-  // Simulate API call
-  setTimeout(() => {
-    // For demo: Check credentials (replace with actual API call)
-    if (email === "admin" && password === "admin123") {
-      showNotification(
-        "success",
-        "Login Successful",
-        "Redirecting to dashboard..."
-      );
+  try {
+    const res = await fetch("./auth/login.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier: email, password })
+    });
 
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        // window.location.href = "dashboard.html";
-        console.log("Redirecting to dashboard...");
-      }, 2000);
-    } else {
-      showNotification(
-        "error",
-        "Login Failed",
-        "Incorrect email or password. Please try again."
-      );
-
-      // Re-enable button
-      loginBtn.disabled = false;
-      loginBtn.classList.remove("loading");
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Login failed");
     }
-  }, 1500); // Simulate network delay
-});
 
-// Demo: Show notification on page load (remove in production)
-setTimeout(() => {
-  showNotification("warning", "Demo Credentials", "Use: admin / admin123");
-}, 500);
+    showNotification("success", "Login Successful", "Redirecting...");
+    window.location.replace(data.redirect);
+  } catch (err) {
+    showNotification("error", "Login Failed", err.message || "Incorrect credentials");
+    loginBtn.disabled = false;
+    loginBtn.classList.remove("loading");
+  }
+});

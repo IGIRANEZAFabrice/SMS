@@ -1,3 +1,4 @@
+<?php require_once __DIR__ . '/../config/db.php'; ?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -18,28 +19,28 @@
       <!-- Sidebar -->
       <div class="sidebar" id="sidebar">
         <div class="logo-container">
-          <div class="logo">
+          <a href="index.php?resto=home" class="logo">
             <div class="logo-icon">WM</div>
             <span class="logo-text">Workshop Pro</span>
-          </div>
+          </a>
         </div>
 
         <div class="menu">
-          <div class="menu-item active" data-page="home">
+          <a class="menu-item active" href="index.php?resto=home">
             <div class="menu-item-content">
               <i class="fas fa-home"></i>
               <span class="menu-item-text">Home</span>
             </div>
-          </div>
+          </a>
 
-          <div class="menu-item" data-page="sell">
+          <a class="menu-item" href="index.php?resto=sell">
             <div class="menu-item-content">
               <i class="fas fa-shopping-cart"></i>
               <span class="menu-item-text">Sell</span>
             </div>
-          </div>
+          </a>
 
-          <div class="menu-item" data-page="stock" data-dropdown="true">
+          <div class="menu-item" data-dropdown="true">
             <div class="menu-item-content">
               <i class="fas fa-box"></i>
               <span class="menu-item-text">Stock</span>
@@ -47,21 +48,25 @@
             <i class="fas fa-chevron-right menu-item-arrow"></i>
           </div>
           <div class="submenu" id="stock-submenu">
-            <div class="submenu-item" data-page="purchase-request">
+            <a class="submenu-item" href="index.php?resto=purchase">
               <i class="fas fa-file-import"></i>
               <span>Purchase Request</span>
-            </div>
-            <div class="submenu-item" data-page="add-stock">
-              <i class="fas fa-plus-circle"></i>
-              <span>Add Stock</span>
+            </a>
+            <div class="submenu" id="stock-submenu" data-page="add-stock">
+              <a class="submenu-item" href="index.php?resto=add">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add Stock</span>
+              </a>
             </div>
             <div class="submenu-item" data-page="damaged-goods">
-              <i class="fas fa-exclamation-triangle"></i>
-              <span>Damaged Goods</span>
+              <a class="submenu-item" href="index.php?resto=damage">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Damaged Goods</span>
+              </a>
             </div>
           </div>
 
-          <div class="menu-item" data-page="reports" data-dropdown="true">
+          <div class="menu-item" data-dropdown="true">
             <div class="menu-item-content">
               <i class="fas fa-chart-bar"></i>
               <span class="menu-item-text">Reports</span>
@@ -69,26 +74,28 @@
             <i class="fas fa-chevron-right menu-item-arrow"></i>
           </div>
           <div class="submenu" id="reports-submenu">
-            <div class="submenu-item" data-page="cogs">
+            <a class="submenu-item" href="index.php?resto=cogs">
               <i class="fas fa-dollar-sign"></i>
               <span>Cost of Goods Sold</span>
-            </div>
+            </a>
             <div class="submenu-item" data-page="damaged-report">
               <i class="fas fa-exclamation-triangle"></i>
               <span>Damaged Goods</span>
             </div>
-            <div class="submenu-item" data-page="supplier-report">
+            <a class="submenu-item" href="index.php?resto=supplier-report">
               <i class="fas fa-users"></i>
               <span>Supplier Report</span>
-            </div>
+            </a>
           </div>
 
-          <div class="menu-item" data-page="settings">
+          <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
+          <a class="menu-item" href="index.php?resto=user">
             <div class="menu-item-content">
               <i class="fas fa-cog"></i>
-              <span class="menu-item-text">Settings</span>
+              <span class="menu-item-text">System Admin</span>
             </div>
-          </div>
+          </a>
+          <?php } ?>
         </div>
 
         <div class="toggle-btn" id="toggleBtn">

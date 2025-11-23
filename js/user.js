@@ -1,39 +1,33 @@
-// Sample data storage (replace with API calls)
-let roles = [
-  { role_id: 1, role_name: "Administrator" },
-  { role_id: 2, role_name: "Manager" },
-  { role_id: 3, role_name: "Staff" },
-];
+let roles = [];
+let users = [];
+const apiBase = "/SMS/pages/user.php";
 
-let users = [
-  {
-    user_id: 1,
-    fullname: "John Doe",
-    email: "john@example.com",
-    role_id: 1,
-    is_active: 1,
-    created_at: "2024-01-15 10:30:00",
-  },
-  {
-    user_id: 2,
-    fullname: "Jane Smith",
-    email: "jane@example.com",
-    role_id: 2,
-    is_active: 1,
-    created_at: "2024-02-20 14:45:00",
-  },
-];
+async function fetchRoles() {
+  const res = await fetch(`${apiBase}?api=roles`);
+  const data = await res.json();
+  roles = data && data.success ? data.data : [];
+  loadRoles();
+}
+
+async function fetchUsers() {
+  const res = await fetch(`${apiBase}?api=users`);
+  const data = await res.json();
+  users = data && data.success ? data.data : [];
+  loadUsers();
+}
 
 // Tab switching
 function switchTab(tab) {
   const tabs = document.querySelectorAll(".tab-btn");
   const contents = document.querySelectorAll(".tab-content");
-
   tabs.forEach((t) => t.classList.remove("active"));
   contents.forEach((c) => c.classList.remove("active"));
-
-  event.target.closest(".tab-btn").classList.add("active");
-  document.getElementById(tab + "Tab").classList.add("active");
+  if (tab === "roles") {
+    tabs[0]?.classList.add("active");
+  } else {
+    tabs[1]?.classList.add("active");
+  }
+  document.getElementById(`${tab}Tab`).classList.add("active");
 }
 
 // Load roles into table
@@ -42,16 +36,6 @@ function loadRoles() {
   tbody.innerHTML = "";
 
   if (roles.length === 0) {
-    tbody.innerHTML = `
-            <tr>
-              <td colspan="3">
-                <div class="empty-state">
-                  <i class="fas fa-user-tag"></i>
-                  <p>No roles found. Add your first role!</p>
-                </div>
-              </td>
-            </tr>
-          `;
     return;
   }
 
@@ -84,16 +68,6 @@ function loadUsers() {
   tbody.innerHTML = "";
 
   if (users.length === 0) {
-    tbody.innerHTML = `
-            <tr>
-              <td colspan="7">
-                <div class="empty-state">
-                  <i class="fas fa-users"></i>
-                  <p>No users found. Add your first user!</p>
-                </div>
-              </td>
-            </tr>
-          `;
     return;
   }
 
@@ -154,24 +128,25 @@ document.getElementById("addRoleForm").addEventListener("submit", (e) => {
   const roleName = document.getElementById("roleName").value.trim();
 
   if (!roleName) return;
-
-  const newRole = {
-    role_id:
-      roles.length > 0 ? Math.max(...roles.map((r) => r.role_id)) + 1 : 1,
-    role_name: roleName,
-  };
-
-  roles.push(newRole);
-  loadRoles();
-  document.getElementById("addRoleForm").reset();
-
-  Swal.fire({
-    icon: "success",
-    title: "Role Added!",
-    text: `${roleName} has been added successfully`,
-    timer: 2000,
-    showConfirmButton: false,
-  });
+  fetch(`${apiBase}?api=roles`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "add", role_name: roleName }),
+  })
+    .then((r) => r.json())
+    .then((resp) => {
+      if (resp && resp.success) {
+        document.getElementById("addRoleForm").reset();
+        fetchRoles();
+        Swal.fire({
+          icon: "success",
+          title: "Role Added!",
+          text: `${roleName} has been added successfully`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
+    });
 });
 
 // Add User
@@ -184,38 +159,27 @@ document.getElementById("addUserForm").addEventListener("submit", (e) => {
   const role_id = parseInt(document.getElementById("userRole").value);
 
   if (!fullname || !email || !password || !role_id) return;
-
-  // Check if email exists
-  if (users.find((u) => u.email === email)) {
-    Swal.fire({
-      icon: "error",
-      title: "Email Exists",
-      text: "This email is already registered",
+  fetch(`${apiBase}?api=users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "add", fullname, email, password, role_id }),
+  })
+    .then((r) => r.json())
+    .then((resp) => {
+      if (resp && resp.success) {
+        document.getElementById("addUserForm").reset();
+        fetchUsers();
+        Swal.fire({
+          icon: "success",
+          title: "User Added!",
+          text: `${fullname} has been added successfully`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({ icon: "error", title: "Email Exists", text: "This email is already registered" });
+      }
     });
-    return;
-  }
-
-  const newUser = {
-    user_id:
-      users.length > 0 ? Math.max(...users.map((u) => u.user_id)) + 1 : 1,
-    fullname,
-    email,
-    role_id,
-    is_active: 1,
-    created_at: new Date().toISOString().slice(0, 19).replace("T", " "),
-  };
-
-  users.push(newUser);
-  loadUsers();
-  document.getElementById("addUserForm").reset();
-
-  Swal.fire({
-    icon: "success",
-    title: "User Added!",
-    text: `${fullname} has been added successfully`,
-    timer: 2000,
-    showConfirmButton: false,
-  });
 });
 
 // Edit Role
@@ -233,15 +197,25 @@ function editRole(roleId) {
     confirmButtonColor: "#3b82f6",
   }).then((result) => {
     if (result.isConfirmed && result.value) {
-      role.role_name = result.value.trim();
-      loadRoles();
-      Swal.fire({
-        icon: "success",
-        title: "Updated!",
-        text: "Role has been updated",
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      const name = result.value.trim();
+      fetch(`${apiBase}?api=roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update", role_id: roleId, role_name: name }),
+      })
+        .then((r) => r.json())
+        .then((resp) => {
+          if (resp && resp.success) {
+            fetchRoles();
+            Swal.fire({
+              icon: "success",
+              title: "Updated!",
+              text: "Role has been updated",
+              timer: 2000,
+              showConfirmButton: false,
+            });
+          }
+        });
     }
   });
 }
@@ -268,15 +242,26 @@ function deleteRole(roleId) {
     confirmButtonText: "Yes, delete it!",
   }).then((result) => {
     if (result.isConfirmed) {
-      roles = roles.filter((r) => r.role_id !== roleId);
-      loadRoles();
-      Swal.fire({
-        icon: "success",
-        title: "Deleted!",
-        text: "Role has been deleted",
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      fetch(`${apiBase}?api=roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", role_id: roleId }),
+      })
+        .then((r) => r.json())
+        .then((resp) => {
+          if (resp && resp.success) {
+            fetchRoles();
+            Swal.fire({
+              icon: "success",
+              title: "Deleted!",
+              text: "Role has been deleted",
+              timer: 2000,
+              showConfirmButton: false,
+            });
+          } else {
+            Swal.fire({ icon: "error", title: "Cannot Delete", text: resp && resp.message ? resp.message : "Error" });
+          }
+        });
     }
   });
 }
@@ -316,18 +301,26 @@ function editUser(userId) {
     },
   }).then((result) => {
     if (result.isConfirmed) {
-      user.fullname = result.value.fullname;
-      user.email = result.value.email;
-      user.role_id = result.value.role_id;
-      user.updated_at = new Date().toISOString().slice(0, 19).replace("T", " ");
-      loadUsers();
-      Swal.fire({
-        icon: "success",
-        title: "Updated!",
-        text: "User has been updated",
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      fetch(`${apiBase}?api=users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update", user_id: userId, fullname: result.value.fullname, email: result.value.email, role_id: result.value.role_id }),
+      })
+        .then((r) => r.json())
+        .then((resp) => {
+          if (resp && resp.success) {
+            fetchUsers();
+            Swal.fire({
+              icon: "success",
+              title: "Updated!",
+              text: "User has been updated",
+              timer: 2000,
+              showConfirmButton: false,
+            });
+          } else {
+            Swal.fire({ icon: "error", title: "Update Failed", text: resp && resp.message ? resp.message : "Error" });
+          }
+        });
     }
   });
 }
@@ -349,15 +342,24 @@ function toggleUserStatus(userId) {
     confirmButtonText: `Yes, ${statusText}!`,
   }).then((result) => {
     if (result.isConfirmed) {
-      user.is_active = newStatus;
-      loadUsers();
-      Swal.fire({
-        icon: "success",
-        title: "Updated!",
-        text: `User has been ${statusText}d`,
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      fetch(`${apiBase}?api=users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle", user_id: userId }),
+      })
+        .then((r) => r.json())
+        .then((resp) => {
+          if (resp && resp.success) {
+            fetchUsers();
+            Swal.fire({
+              icon: "success",
+              title: "Updated!",
+              text: `User has been ${statusText}d`,
+              timer: 2000,
+              showConfirmButton: false,
+            });
+          }
+        });
     }
   });
 }
@@ -373,15 +375,24 @@ function deleteUser(userId) {
     confirmButtonText: "Yes, delete it!",
   }).then((result) => {
     if (result.isConfirmed) {
-      users = users.filter((u) => u.user_id !== userId);
-      loadUsers();
-      Swal.fire({
-        icon: "success",
-        title: "Deleted!",
-        text: "User has been deleted",
-        timer: 2000,
-        showConfirmButton: false,
-      });
+      fetch(`${apiBase}?api=users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", user_id: userId }),
+      })
+        .then((r) => r.json())
+        .then((resp) => {
+          if (resp && resp.success) {
+            fetchUsers();
+            Swal.fire({
+              icon: "success",
+              title: "Deleted!",
+              text: "User has been deleted",
+              timer: 2000,
+              showConfirmButton: false,
+            });
+          }
+        });
     }
   });
 }
@@ -402,6 +413,7 @@ function searchTable(tableId, searchText) {
   }
 }
 
-// Initialize
-loadRoles();
-loadUsers();
+(async function init() {
+  await fetchRoles();
+  await fetchUsers();
+})();

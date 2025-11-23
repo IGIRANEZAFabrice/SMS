@@ -1,3 +1,15 @@
+<?php
+require_once __DIR__ . '/../config/db.php';
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /SMS/index.php?page=login');
+    exit;
+}
+if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) {
+    http_response_code(403);
+    echo 'Access denied';
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,9 +17,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Purchase Requests Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/sidebar.css">
     <link rel="stylesheet" href="../css/request.css">
 </head>
 <body>
+    <div class="dashboard">
+      <?php include __DIR__ . '/sidebar.php'; ?>
+      <div class="main-content">
+        <div class="header">
+          <div class="header-left">
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+              <i class="fas fa-bars"></i>
+            </button>
+            <h1 class="header-title" id="pageTitle">Purchase Requests</h1>
+          </div>
+          <div class="profile-container">
+            <div class="profile-icon">
+              <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-dropdown">
+              <div class="dropdown-item">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+              </div>
+              <div class="dropdown-item logout">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="content">
     <div class="container">
         <!-- Alert -->
         <div id="alert" class="alert"></div>
@@ -112,6 +152,7 @@
         </div>
     </div>
 
+    <script src="../js/sidebar.js"></script>
     <script src="../js/request.js"></script>
 </body>
 </html>

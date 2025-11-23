@@ -1,3 +1,6 @@
+<?php
+require_once __DIR__ . '/config/db.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -11,10 +14,7 @@
     <link rel="stylesheet" href="./css/login.css">
   </head>
   <body>
-    <!-- Notification Container -->
     <div class="notification-container" id="notificationContainer"></div>
-
-    <!-- Login Container -->
     <div class="login-container">
       <div class="login-header">
         <div class="logo-section">
@@ -39,7 +39,7 @@
 
         <form id="loginForm">
           <div class="form-group">
-            <label for="email">Email or Username</label>
+            <label for="email">Email </label>
             <div class="input-wrapper">
               <i class="fas fa-user"></i>
               <input
@@ -83,6 +83,6 @@
         </form>
       </div>
     </div>
-   <script src="./js/login.js"></script>
+   <script src="./js/login.js?v=1"></script>
   </body>
 </html>
