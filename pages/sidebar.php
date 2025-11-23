@@ -36,6 +36,10 @@
         <i class="fas fa-plus-circle"></i>
         <span>Add Stock</span>
       </a>
+      <a class="submenu-item" href="index.php?resto=supplier">
+        <i class="fas fa-user"></i>
+        <span>Manage Suppliers</span>
+      </a>
       <a class="submenu-item" href="index.php?resto=progress">
         <i class="fas fa-exclamation-triangle"></i>
         <span>Damaged Goods</span>
@@ -60,6 +64,10 @@
       <a class="submenu-item" href="index.php?resto=supplier-report">
         <i class="fas fa-users"></i>
         <span>Supplier Report</span>
+      </a>
+      <a class="submenu-item" href="index.php?resto=receipt">
+        <i class="fas fa-receipt"></i>
+        <span>Sales Receipts</span>
       </a>
     </div>
     <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>

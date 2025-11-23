@@ -20,6 +20,16 @@ switch ($view) {
         $title = 'Point of Sale';
         $page = 'sell.php';
         break;
+
+    case 'supplier':
+        $title = 'Manage Suppliers';
+        $page = 'supplier.php';
+        break;
+
+    case 'receipt':
+        $title = 'Manage Receipts';
+        $page = 'receipt.php';
+        break;
     case 'add':
         $title = 'Add New Items In stock';
         $page = 'additem.php';

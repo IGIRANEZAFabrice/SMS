@@ -1,677 +1,172 @@
+<?php
+require_once __DIR__ . '/../config/db.php';
+
+$is_api = isset($_GET['api']) ? (string)$_GET['api'] : '';
+if ($is_api === 'cogs-report') {
+    if (!isset($_SESSION['user_id'])) {
+        header('Content-Type: application/json');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+    header('Content-Type: application/json');
+
+    $date_from = isset($_GET['from']) ? $_GET['from'] : null;
+    $date_to = isset($_GET['to']) ? $_GET['to'] : null;
+    $cat_id = isset($_GET['category']) ? (int)$_GET['category'] : null;
+
+    $where_clauses = [];
+    if($date_from) $where_clauses[] = "r.created_at >= '$date_from 00:00:00'";
+    if($date_to) $where_clauses[] = "r.created_at <= '$date_to 23:59:59'";
+    if($cat_id) $where_clauses[] = "i.cat_id = $cat_id";
+    $where_sql = count($where_clauses) > 0 ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+    $query = "
+        SELECT
+            ri.qty,
+            ri.price as sale_price,
+            i.price as cost_price, -- This assumes tbl_items.price is the cost.
+            r.receipt_code,
+            r.created_at as sale_date,
+            u.fullname as created_by,
+            i.item_id,
+            i.item_name,
+            c.cat_id,
+            c.cat_name
+        FROM receipt_items ri
+        JOIN receipts r ON ri.receipt_code = r.receipt_code
+        JOIN tbl_items i ON ri.item_id = i.item_id
+        JOIN users u ON r.created_by = u.user_id
+        LEFT JOIN tbl_categories c ON i.cat_id = c.cat_id
+        $where_sql
+    ";
+
+    $res = $conn->query($query);
+    $sales_data = [];
+    if($res) {
+        while($row = $res->fetch_assoc()) {
+            $sales_data[] = $row;
+        }
+    }
+    
+    // Categories for filter
+    $cat_res = $conn->query("SELECT cat_id, cat_name FROM tbl_categories ORDER BY cat_name");
+    $categories = [];
+    while($row = $cat_res->fetch_assoc()) $categories[] = $row;
+
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'sales' => $sales_data,
+            'categories' => $categories
+        ]
+    ]);
+    exit;
+}
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /SMS/index.php?page=login');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cost of Goods Sold (COGS) Report</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <link rel="stylesheet" href="../css/costreport.css">
-  </head>
-  <body>
-    <div class="page-header">
-      <h1><i class="fas fa-chart-line"></i> Cost of Goods Sold (COGS) Report</h1>
-      <p>Comprehensive analysis of sales costs, revenue, and profitability</p>
+    <link rel="stylesheet" href="../css/sidebar.css" />
+    <link rel="stylesheet" href="../css/costreport.css" />
+</head>
+<body>
+    <div class="dashboard">
+        <?php include __DIR__ . '/sidebar.php'; ?>
+        <div class="main-content">
+            <?php include __DIR__ . '/header.php'; ?>
+            <div class="content">
+                <div class="page-header">
+                    <h1><i class="fas fa-chart-line"></i> Cost of Goods Sold (COGS) Report</h1>
+                    <p>Comprehensive analysis of sales costs, revenue, and profitability</p>
+                </div>
+
+                <div class="container">
+                    <!-- Filters -->
+                    <div class="filters-card">
+                        <div class="filters-grid">
+                            <div class="form-group">
+                                <label><i class="fas fa-calendar"></i> Date From</label>
+                                <input type="date" class="form-control" id="dateFrom" />
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-calendar"></i> Date To</label>
+                                <input type="date" class="form-control" id="dateTo" />
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-tags"></i> Category</label>
+                                <select class="form-control" id="categoryFilter">
+                                    <option value="">All Categories</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-primary" onclick="applyFilters()">
+                                    <i class="fas fa-filter"></i> Apply
+                                </button>
+                                <button class="btn btn-success" onclick="exportReport()">
+                                    <i class="fas fa-file-excel"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-header"><div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div><div class="stat-title">Total Revenue</div></div>
+                            <div class="stat-value" id="totalRevenue">$0.00</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header"><div class="stat-icon red"><i class="fas fa-shopping-cart"></i></div><div class="stat-title">Total COGS</div></div>
+                            <div class="stat-value" id="totalCOGS">$0.00</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header"><div class="stat-icon blue"><i class="fas fa-chart-pie"></i></div><div class="stat-title">Gross Profit</div></div>
+                            <div class="stat-value" id="grossProfit">$0.00</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header"><div class="stat-icon purple"><i class="fas fa-percentage"></i></div><div class="stat-title">Profit Margin</div></div>
+                            <div class="stat-value" id="profitMargin">0%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header"><div class="stat-icon orange"><i class="fas fa-receipt"></i></div><div class="stat-title">Total Receipts</div></div>
+                            <div class="stat-value" id="totalReceipts">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <div class="card"><div class="card-header"><h3 class="card-title">Revenue vs COGS Trend</h3></div><div class="chart-container"><canvas id="revenueVsCOGSChart"></canvas></div></div>
+                        <div class="card"><div class="card-header"><h3 class="card-title">Profit Margin by Category</h3></div><div class="chart-container"><canvas id="profitByCategoryChart"></canvas></div></div>
+                    </div>
+
+                    <!-- Detailed Reports -->
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">Detailed COGS Analysis</h3></div>
+                        <div class="tabs">
+                            <button class="tab-btn active" onclick="switchTab(event, 'by-receipt')"><i class="fas fa-receipt"></i> By Receipt</button>
+                            <button class="tab-btn" onclick="switchTab(event, 'by-item')"><i class="fas fa-box"></i> By Item</button>
+                            <button class="tab-btn" onclick="switchTab(event, 'by-category')"><i class="fas fa-tags"></i> By Category</button>
+                        </div>
+                        <div class="tab-content active" id="by-receiptTab"><div class="table-container"><table><thead><tr><th>Receipt Code</th><th>Date</th><th>Items Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Created By</th></tr></thead><tbody id="receiptTableBody"></tbody></table></div></div>
+                        <div class="tab-content" id="by-itemTab"><div class="table-container"><table><thead><tr><th>Item Name</th><th>Category</th><th class="text-right">Qty Sold</th><th class="text-right">Avg Sale Price</th><th class="text-right">Avg Cost Price</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th>Margin</th></tr></thead><tbody id="itemTableBody"></tbody></table></div></div>
+                        <div class="tab-content" id="by-categoryTab"><div class="table-container"><table><thead><tr><th>Category</th><th class="text-right">Items Sold</th><th class="text-right">Qty Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Performance</th></tr></thead><tbody id="categoryTableBody"></tbody></table></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="container">
-      <!-- Filters -->
-      <div class="filters-card">
-        <div class="filters-grid">
-          <div class="form-group">
-            <label><i class="fas fa-calendar"></i> Date From</label>
-            <input type="date" class="form-control" id="dateFrom" />
-          </div>
-          <div class="form-group">
-            <label><i class="fas fa-calendar"></i> Date To</label>
-            <input type="date" class="form-control" id="dateTo" />
-          </div>
-          <div class="form-group">
-            <label><i class="fas fa-tags"></i> Category</label>
-            <select class="form-control" id="categoryFilter">
-              <option value="">All Categories</option>
-            </select>
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <button class="btn btn-primary" onclick="applyFilters()">
-              <i class="fas fa-filter"></i> Apply
-            </button>
-            <button class="btn btn-success" onclick="exportReport()">
-              <i class="fas fa-file-excel"></i> Export
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Statistics -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-header">
-            <div class="stat-icon green">
-              <i class="fas fa-dollar-sign"></i>
-            </div>
-            <div class="stat-title">Total Revenue</div>
-          </div>
-          <div class="stat-value" id="totalRevenue">$0.00</div>
-          <div class="stat-change positive">
-            <i class="fas fa-arrow-up"></i> <span id="revenueChange">0%</span> from last period
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <div class="stat-icon red">
-              <i class="fas fa-shopping-cart"></i>
-            </div>
-            <div class="stat-title">Total COGS</div>
-          </div>
-          <div class="stat-value" id="totalCOGS">$0.00</div>
-          <div class="stat-change negative">
-            <i class="fas fa-arrow-up"></i> <span id="cogsChange">0%</span> from last period
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <div class="stat-icon blue">
-              <i class="fas fa-chart-pie"></i>
-            </div>
-            <div class="stat-title">Gross Profit</div>
-          </div>
-          <div class="stat-value" id="grossProfit">$0.00</div>
-          <div class="stat-change positive">
-            <i class="fas fa-arrow-up"></i> <span id="profitChange">0%</span> margin
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <div class="stat-icon purple">
-              <i class="fas fa-percentage"></i>
-            </div>
-            <div class="stat-title">Profit Margin</div>
-          </div>
-          <div class="stat-value" id="profitMargin">0%</div>
-          <div class="stat-change positive">
-            <i class="fas fa-check-circle"></i> <span id="marginStatus">Healthy</span>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-header">
-            <div class="stat-icon orange">
-              <i class="fas fa-receipt"></i>
-            </div>
-            <div class="stat-title">Total Receipts</div>
-          </div>
-          <div class="stat-value" id="totalReceipts">0</div>
-          <div class="stat-change">
-            <i class="fas fa-file-invoice"></i> <span id="avgReceiptValue">$0.00</span> average
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts -->
-      <div class="charts-grid">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Revenue vs COGS Trend</h3>
-          </div>
-          <div class="chart-container">
-            <canvas id="revenueVsCOGSChart"></canvas>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Profit Margin by Category</h3>
-          </div>
-          <div class="chart-container">
-            <canvas id="profitByCategoryChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Detailed Reports -->
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Detailed COGS Analysis</h3>
-        </div>
-
-        <div class="tabs">
-          <button class="tab-btn active" onclick="switchTab('by-receipt')">
-            <i class="fas fa-receipt"></i> By Receipt
-          </button>
-          <button class="tab-btn" onclick="switchTab('by-item')">
-            <i class="fas fa-box"></i> By Item
-          </button>
-          <button class="tab-btn" onclick="switchTab('by-category')">
-            <i class="fas fa-tags"></i> By Category
-          </button>
-        </div>
-
-        <!-- By Receipt Tab -->
-        <div class="tab-content active" id="by-receiptTab">
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Receipt Code</th>
-                  <th>Date</th>
-                  <th>Items Sold</th>
-                  <th class="text-right">Total Revenue</th>
-                  <th class="text-right">Total COGS</th>
-                  <th class="text-right">Gross Profit</th>
-                  <th class="text-right">Margin %</th>
-                  <th>Created By</th>
-                </tr>
-              </thead>
-              <tbody id="receiptTableBody">
-                <!-- Data will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- By Item Tab -->
-        <div class="tab-content" id="by-itemTab">
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Item Name</th>
-                  <th>Category</th>
-                  <th class="text-right">Qty Sold</th>
-                  <th class="text-right">Avg Sale Price</th>
-                  <th class="text-right">Avg Cost Price</th>
-                  <th class="text-right">Total Revenue</th>
-                  <th class="text-right">Total COGS</th>
-                  <th class="text-right">Gross Profit</th>
-                  <th>Margin</th>
-                </tr>
-              </thead>
-              <tbody id="itemTableBody">
-                <!-- Data will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- By Category Tab -->
-        <div class="tab-content" id="by-categoryTab">
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th class="text-right">Items Sold</th>
-                  <th class="text-right">Qty Sold</th>
-                  <th class="text-right">Total Revenue</th>
-                  <th class="text-right">Total COGS</th>
-                  <th class="text-right">Gross Profit</th>
-                  <th class="text-right">Margin %</th>
-                  <th>Performance</th>
-                </tr>
-              </thead>
-              <tbody id="categoryTableBody">
-                <!-- Data will be inserted here -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      // Sample data
-      const categories = [
-        { cat_id: 1, cat_name: "Electronics" },
-        { cat_id: 2, cat_name: "Hardware" },
-        { cat_id: 3, cat_name: "Tools" }
-      ];
-
-      const items = [
-        { item_id: 1, item_name: "Laptop Battery", cat_id: 1, item_unit: "PCS", cost_price: 40.00, sale_price: 50.00 },
-        { item_id: 2, item_name: "Screwdriver Set", cat_id: 3, item_unit: "SET", cost_price: 18.00, sale_price: 25.00 },
-        { item_id: 3, item_name: "Power Supply", cat_id: 1, item_unit: "PCS", cost_price: 65.00, sale_price: 80.00 },
-        { item_id: 4, item_name: "Wrench Set", cat_id: 3, item_unit: "SET", cost_price: 25.00, sale_price: 35.00 },
-        { item_id: 5, item_name: "LED Light", cat_id: 1, item_unit: "PCS", cost_price: 10.00, sale_price: 15.00 }
-      ];
-
-      const users = [
-        { user_id: 1, fullname: "John Doe" },
-        { user_id: 2, fullname: "Jane Smith" }
-      ];
-
-      // Receipts data
-      const receipts = [
-        { receipt_id: 1, receipt_code: "RC-001", created_at: "2024-01-15 10:30:00", created_by: 1 },
-        { receipt_id: 2, receipt_code: "RC-002", created_at: "2024-01-18 14:20:00", created_by: 2 },
-        { receipt_id: 3, receipt_code: "RC-003", created_at: "2024-02-05 09:15:00", created_by: 1 },
-        { receipt_id: 4, receipt_code: "RC-004", created_at: "2024-02-12 16:45:00", created_by: 2 },
-        { receipt_id: 5, receipt_code: "RC-005", created_at: "2024-03-01 11:00:00", created_by: 1 }
-      ];
-
-      // Receipt items (sold items)
-      const receiptItems = [
-        { ri_id: 1, receipt_code: "RC-001", item_id: 1, qty: 5, price: 50.00 },
-        { ri_id: 2, receipt_code: "RC-001", item_id: 3, qty: 3, price: 80.00 },
-        { ri_id: 3, receipt_code: "RC-002", item_id: 2, qty: 10, price: 25.00 },
-        { ri_id: 4, receipt_code: "RC-003", item_id: 5, qty: 20, price: 15.00 },
-        { ri_id: 5, receipt_code: "RC-003", item_id: 1, qty: 8, price: 50.00 },
-        { ri_id: 6, receipt_code: "RC-004", item_id: 4, qty: 5, price: 35.00 },
-        { ri_id: 7, receipt_code: "RC-004", item_id: 3, qty: 2, price: 80.00 },
-        { ri_id: 8, receipt_code: "RC-005", item_id: 1, qty: 12, price: 50.00 },
-        { ri_id: 9, receipt_code: "RC-005", item_id: 2, qty: 7, price: 25.00 }
-      ];
-
-      let revenueVsCOGSChart, profitByCategoryChart;
-
-      // Initialize
-      function init() {
-        loadCategoryFilter();
-        calculateStatistics();
-        loadCharts();
-        loadReceiptTable();
-        loadItemTable();
-        loadCategoryTable();
-      }
-
-      // Load category filter
-      function loadCategoryFilter() {
-        const select = document.getElementById("categoryFilter");
-        categories.forEach(cat => {
-          select.innerHTML += `<option value="${cat.cat_id}">${cat.cat_name}</option>`;
-        });
-      }
-
-      // Calculate statistics
-      function calculateStatistics() {
-        let totalRevenue = 0;
-        let totalCOGS = 0;
-
-        receiptItems.forEach(ri => {
-          const item = items.find(i => i.item_id === ri.item_id);
-          if (item) {
-            totalRevenue += ri.qty * ri.price;
-            totalCOGS += ri.qty * item.cost_price;
-          }
-        });
-
-        const grossProfit = totalRevenue - totalCOGS;
-        const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100) : 0;
-        const avgReceiptValue = receipts.length > 0 ? totalRevenue / receipts.length : 0;
-
-        document.getElementById("totalRevenue").textContent = `$${totalRevenue.toFixed(2)}`;
-        document.getElementById("totalCOGS").textContent = `$${totalCOGS.toFixed(2)}`;
-        document.getElementById("grossProfit").textContent = `$${grossProfit.toFixed(2)}`;
-        document.getElementById("profitMargin").textContent = `${profitMargin.toFixed(1)}%`;
-        document.getElementById("totalReceipts").textContent = receipts.length;
-        document.getElementById("avgReceiptValue").textContent = `$${avgReceiptValue.toFixed(2)}`;
-
-        // Update change indicators (sample percentages)
-        document.getElementById("revenueChange").textContent = "12.5%";
-        document.getElementById("cogsChange").textContent = "8.3%";
-        document.getElementById("profitChange").textContent = `${profitMargin.toFixed(1)}%`;
-        document.getElementById("marginStatus").textContent = profitMargin > 30 ? "Excellent" : profitMargin > 20 ? "Healthy" : "Fair";
-      }
-
-      // Load charts
-      function loadCharts() {
-        // Revenue vs COGS Chart
-        const ctx1 = document.getElementById("revenueVsCOGSChart").getContext("2d");
-        revenueVsCOGSChart = new Chart(ctx1, {
-          type: "line",
-          data: {
-            labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-            datasets: [
-              {
-                label: "Revenue",
-                data: [1250, 1480, 1920, 1650, 2100, 2300],
-                borderColor: "#10b981",
-                backgroundColor: "rgba(16, 185, 129, 0.1)",
-                tension: 0.4,
-                fill: true
-              },
-              {
-                label: "COGS",
-                data: [850, 1020, 1350, 1180, 1500, 1650],
-                borderColor: "#ef4444",
-                backgroundColor: "rgba(239, 68, 68, 0.1)",
-                tension: 0.4,
-                fill: true
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "top"
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: function(value) {
-                    return "$" + value;
-                  }
-                }
-              }
-            }
-          }
-        });
-
-        // Profit by Category Chart
-        const categoryData = calculateCategoryStats();
-        const ctx2 = document.getElementById("profitByCategoryChart").getContext("2d");
-        profitByCategoryChart = new Chart(ctx2, {
-          type: "bar",
-          data: {
-            labels: categoryData.map(c => c.categoryName),
-            datasets: [
-              {
-                label: "Gross Profit",
-                data: categoryData.map(c => c.profit),
-                backgroundColor: ["#3b82f6", "#10b981", "#f59e0b"],
-                borderRadius: 8
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: function(value) {
-                    return "$" + value;
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-
-      // Calculate category statistics
-      function calculateCategoryStats() {
-        const categoryStats = {};
-
-        categories.forEach(cat => {
-          categoryStats[cat.cat_id] = {
-            categoryName: cat.cat_name,
-            revenue: 0,
-            cogs: 0,
-            profit: 0,
-            qtySold: 0
-          };
-        });
-
-        receiptItems.forEach(ri => {
-          const item = items.find(i => i.item_id === ri.item_id);
-          if (item) {
-            const revenue = ri.qty * ri.price;
-            const cogs = ri.qty * item.cost_price;
-            const profit = revenue - cogs;
-
-            categoryStats[item.cat_id].revenue += revenue;
-            categoryStats[item.cat_id].cogs += cogs;
-            categoryStats[item.cat_id].profit += profit;
-            categoryStats[item.cat_id].qtySold += ri.qty;
-          }
-        });
-
-        return Object.values(categoryStats);
-      }
-
-      // Load receipt table
-      function loadReceiptTable() {
-        const tbody = document.getElementById("receiptTableBody");
-        tbody.innerHTML = "";
-
-        receipts.forEach(receipt => {
-          const items = receiptItems.filter(ri => ri.receipt_code === receipt.receipt_code);
-          let totalRevenue = 0;
-          let totalCOGS = 0;
-
-          items.forEach(ri => {
-            const item = items.find(i => i.item_id === ri.item_id);
-            if (item) {
-              totalRevenue += ri.qty * ri.price;
-              totalCOGS += ri.qty * item.cost_price;
-            }
-          });
-
-          const grossProfit = totalRevenue - totalCOGS;
-          const margin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100) : 0;
-          const user = users.find(u => u.user_id === receipt.created_by);
-
-          tbody.innerHTML += `
-            <tr>
-              <td><strong>${receipt.receipt_code}</strong></td>
-              <td>${new Date(receipt.created_at).toLocaleDateString()}</td>
-              <td>${items.length} item(s)</td>
-              <td class="text-right"><strong>${totalRevenue.toFixed(2)}</strong></td>
-              <td class="text-right">${totalCOGS.toFixed(2)}</td>
-              <td class="text-right" style="color: ${grossProfit > 0 ? 'var(--green)' : 'var(--red)'}"><strong>${grossProfit.toFixed(2)}</strong></td>
-              <td class="text-right">${margin.toFixed(1)}%</td>
-              <td>${user ? user.fullname : 'N/A'}</td>
-            </tr>
-          `;
-        });
-      }
-
-      // Load item table
-      function loadItemTable() {
-        const tbody = document.getElementById("itemTableBody");
-        tbody.innerHTML = "";
-
-        const itemStats = {};
-
-        // Calculate stats for each item
-        items.forEach(item => {
-          itemStats[item.item_id] = {
-            item: item,
-            qtySold: 0,
-            totalRevenue: 0,
-            totalCOGS: 0,
-            totalSalePrice: 0,
-            saleCount: 0
-          };
-        });
-
-        receiptItems.forEach(ri => {
-          const item = items.find(i => i.item_id === ri.item_id);
-          if (item && itemStats[ri.item_id]) {
-            itemStats[ri.item_id].qtySold += ri.qty;
-            itemStats[ri.item_id].totalRevenue += ri.qty * ri.price;
-            itemStats[ri.item_id].totalCOGS += ri.qty * item.cost_price;
-            itemStats[ri.item_id].totalSalePrice += ri.price;
-            itemStats[ri.item_id].saleCount++;
-          }
-        });
-
-        Object.values(itemStats).forEach(stat => {
-          if (stat.qtySold > 0) {
-            const avgSalePrice = stat.totalSalePrice / stat.saleCount;
-            const grossProfit = stat.totalRevenue - stat.totalCOGS;
-            const margin = stat.totalRevenue > 0 ? (grossProfit / stat.totalRevenue * 100) : 0;
-            const category = categories.find(c => c.cat_id === stat.item.cat_id);
-
-            let marginBadge;
-            if (margin >= 40) {
-              marginBadge = '<span class="profit-badge high">High</span>';
-            } else if (margin >= 25) {
-              marginBadge = '<span class="profit-badge medium">Medium</span>';
-            } else if (margin >= 10) {
-              marginBadge = '<span class="profit-badge low">Low</span>';
-            } else {
-              marginBadge = '<span class="profit-badge loss">Loss</span>';
-            }
-
-            tbody.innerHTML += `
-              <tr>
-                <td>
-                  <div class="item-row">
-                    <div class="item-image"><i class="fas fa-box"></i></div>
-                    <strong>${stat.item.item_name}</strong>
-                  </div>
-                </td>
-                <td>${category ? category.cat_name : 'N/A'}</td>
-                <td class="text-right"><strong>${stat.qtySold}</strong> ${stat.item.item_unit}</td>
-                <td class="text-right">${avgSalePrice.toFixed(2)}</td>
-                <td class="text-right">${stat.item.cost_price.toFixed(2)}</td>
-                <td class="text-right"><strong>${stat.totalRevenue.toFixed(2)}</strong></td>
-                <td class="text-right">${stat.totalCOGS.toFixed(2)}</td>
-                <td class="text-right" style="color: ${grossProfit > 0 ? 'var(--green)' : 'var(--red)'}"><strong>${grossProfit.toFixed(2)}</strong></td>
-                <td>${marginBadge} ${margin.toFixed(1)}%</td>
-              </tr>
-            `;
-          }
-        });
-
-        if (tbody.innerHTML === "") {
-          tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-box"></i><h3>No Sales Data</h3></div></td></tr>';
-        }
-      }
-
-      // Load category table
-      function loadCategoryTable() {
-        const tbody = document.getElementById("categoryTableBody");
-        tbody.innerHTML = "";
-
-        const categoryStats = calculateCategoryStats();
-
-        categoryStats.forEach(stat => {
-          const grossProfit = stat.revenue - stat.cogs;
-          const margin = stat.revenue > 0 ? (grossProfit / stat.revenue * 100) : 0;
-
-          let performance;
-          if (margin >= 35) {
-            performance = '<span class="profit-badge high">Excellent</span>';
-          } else if (margin >= 25) {
-            performance = '<span class="profit-badge medium">Good</span>';
-          } else if (margin >= 15) {
-            performance = '<span class="profit-badge low">Fair</span>';
-          } else {
-            performance = '<span class="profit-badge loss">Poor</span>';
-          }
-
-          // Count unique items sold in this category
-          const categoryItems = items.filter(i => i.cat_id === categories.find(c => c.cat_name === stat.categoryName).cat_id);
-          const soldItems = new Set();
-          receiptItems.forEach(ri => {
-            if (categoryItems.find(ci => ci.item_id === ri.item_id)) {
-              soldItems.add(ri.item_id);
-            }
-          });
-
-          tbody.innerHTML += `
-            <tr>
-              <td><strong>${stat.categoryName}</strong></td>
-              <td class="text-right">${soldItems.size}</td>
-              <td class="text-right"><strong>${stat.qtySold}</strong></td>
-              <td class="text-right"><strong>${stat.revenue.toFixed(2)}</strong></td>
-              <td class="text-right">${stat.cogs.toFixed(2)}</td>
-              <td class="text-right" style="color: ${grossProfit > 0 ? 'var(--green)' : 'var(--red)'}"><strong>${grossProfit.toFixed(2)}</strong></td>
-              <td class="text-right">${margin.toFixed(1)}%</td>
-              <td>${performance}</td>
-            </tr>
-          `;
-        });
-
-        if (tbody.innerHTML === "") {
-          tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-tags"></i><h3>No Category Data</h3></div></td></tr>';
-        }
-      }
-
-      // Switch tabs
-      function switchTab(tab) {
-        const tabs = document.querySelectorAll(".tab-btn");
-        const contents = document.querySelectorAll(".tab-content");
-
-        tabs.forEach(t => t.classList.remove("active"));
-        contents.forEach(c => c.classList.remove("active"));
-
-        event.target.closest(".tab-btn").classList.add("active");
-        document.getElementById(tab + "Tab").classList.add("active");
-      }
-
-      // Apply filters
-      function applyFilters() {
-        const dateFrom = document.getElementById("dateFrom").value;
-        const dateTo = document.getElementById("dateTo").value;
-        const categoryId = document.getElementById("categoryFilter").value;
-
-        console.log("Filters applied:", { dateFrom, dateTo, categoryId });
-        alert("Filters applied! Connect this to your backend API to filter data.");
-      }
-
-      // Export report
-      function exportReport() {
-        let csv = "COST OF GOODS SOLD (COGS) REPORT\n\n";
-        
-        // Summary
-        csv += "SUMMARY\n";
-        csv += `Total Revenue,${document.getElementById("totalRevenue").textContent}\n`;
-        csv += `Total COGS,${document.getElementById("totalCOGS").textContent}\n`;
-        csv += `Gross Profit,${document.getElementById("grossProfit").textContent}\n`;
-        csv += `Profit Margin,${document.getElementById("profitMargin").textContent}\n`;
-        csv += `Total Receipts,${document.getElementById("totalReceipts").textContent}\n\n`;
-
-        // By Receipt
-        csv += "BY RECEIPT\n";
-        csv += "Receipt Code,Date,Items,Revenue,COGS,Gross Profit,Margin %,Created By\n";
-        receipts.forEach(receipt => {
-          const items = receiptItems.filter(ri => ri.receipt_code === receipt.receipt_code);
-          let totalRevenue = 0;
-          let totalCOGS = 0;
-
-          items.forEach(ri => {
-            const item = items.find(i => i.item_id === ri.item_id);
-            if (item) {
-              totalRevenue += ri.qty * ri.price;
-              totalCOGS += ri.qty * item.cost_price;
-            }
-          });
-
-          const grossProfit = totalRevenue - totalCOGS;
-          const margin = totalRevenue > 0 ? (grossProfit / totalRevenue * 100) : 0;
-          const user = users.find(u => u.user_id === receipt.created_by);
-
-          csv += `"${receipt.receipt_code}","${new Date(receipt.created_at).toLocaleDateString()}",${items.length},${totalRevenue.toFixed(2)},${totalCOGS.toFixed(2)},${grossProfit.toFixed(2)},${margin.toFixed(1)},"${user ? user.fullname : 'N/A'}"\n`;
-        });
-
-        // By Category
-        csv += "\n\nBY CATEGORY\n";
-        csv += "Category,Items Sold,Qty Sold,Revenue,COGS,Gross Profit,Margin %\n";
-        const categoryStats = calculateCategoryStats();
-        categoryStats.forEach(stat => {
-          const grossProfit = stat.revenue - stat.cogs;
-          const margin = stat.revenue > 0 ? (grossProfit / stat.revenue * 100) : 0;
-          csv += `"${stat.categoryName}",0,${stat.qtySold},${stat.revenue.toFixed(2)},${stat.cogs.toFixed(2)},${grossProfit.toFixed(2)},${margin.toFixed(1)}\n`;
-        });
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `cogs_report_${new Date().toISOString().slice(0, 10)}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      }
-
-      // Initialize on page load
-      init();
+    <script src="../js/sidebar.js"></script>
+    <script src="../js/costreport.js"></script>
+</body>
+</html>

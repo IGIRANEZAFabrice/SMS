@@ -56,9 +56,14 @@ if ($is_api !== '') {
         http_response_code(400); echo json_encode(['success' => false]); exit;
     } elseif ($is_api === 'items') {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $sql = 'SELECT i.item_id,i.item_name,i.cat_id,i.supplier_id,i.item_unit,i.price,i.item_status,c.cat_name,s.supplier_name FROM tbl_items i LEFT JOIN tbl_categories c ON c.cat_id=i.cat_id LEFT JOIN suppliers s ON s.supplier_id=i.supplier_id ORDER BY i.item_id DESC';
+            $sql = 'SELECT i.item_id,i.item_name,i.cat_id,i.supplier_id,i.unit_id,u.unit_name,i.price,i.item_status,c.cat_name,s.supplier_name 
+                    FROM tbl_items i 
+                    LEFT JOIN tbl_categories c ON c.cat_id=i.cat_id 
+                    LEFT JOIN suppliers s ON s.supplier_id=i.supplier_id 
+                    LEFT JOIN tbl_units u ON u.unit_id = i.unit_id 
+                    ORDER BY i.item_id DESC';
             $res = $conn->query($sql); $out = [];
-            if ($res) { while ($row = $res->fetch_assoc()) { $out[] = [ 'item_id' => (int)$row['item_id'], 'item_name' => (string)$row['item_name'], 'cat_id' => (int)$row['cat_id'], 'cat_name' => (string)($row['cat_name'] ?? ''), 'supplier_id' => (int)$row['supplier_id'], 'supplier_name' => (string)($row['supplier_name'] ?? ''), 'item_unit' => (string)$row['item_unit'], 'price' => (float)$row['price'], 'item_status' => (int)$row['item_status'] ]; } }
+            if ($res) { while ($row = $res->fetch_assoc()) { $out[] = [ 'item_id' => (int)$row['item_id'], 'item_name' => (string)$row['item_name'], 'cat_id' => (int)$row['cat_id'], 'cat_name' => (string)($row['cat_name'] ?? ''), 'supplier_id' => (int)$row['supplier_id'], 'supplier_name' => (string)($row['supplier_name'] ?? ''), 'unit_id' => (int)$row['unit_id'], 'unit_name' => (string)($row['unit_name'] ?? ''), 'price' => (float)$row['price'], 'item_status' => (int)$row['item_status'] ]; } }
             echo json_encode(['success' => true, 'data' => $out]); exit;
         }
         $input = json_decode(file_get_contents('php://input'), true); if (!is_array($input)) { $input = $_POST; }
@@ -67,13 +72,36 @@ if ($is_api !== '') {
             $name = isset($input['item_name']) ? trim((string)$input['item_name']) : '';
             $cat_id = isset($input['cat_id']) ? (int)$input['cat_id'] : 0;
             $supplier_id = isset($input['supplier_id']) ? (int)$input['supplier_id'] : 0;
-            $unit = isset($input['item_unit']) ? trim((string)$input['item_unit']) : '';
+            $unit_id = isset($input['unit_id']) ? (int)$input['unit_id'] : 0;
             $price = isset($input['price']) ? (float)$input['price'] : 0;
             $status = isset($input['item_status']) ? (int)$input['item_status'] : 1;
-            if ($name === '' || !$cat_id || !$supplier_id || $unit === '' || $price <= 0) { http_response_code(400); echo json_encode(['success' => false]); exit; }
-            $stmt = $conn->prepare('INSERT INTO tbl_items(item_name,item_unit,item_status,price,cat_id,supplier_id,created_by) VALUES (?,?,?,?,?,?,?)'); if (!$stmt) { http_response_code(500); echo json_encode(['success' => false]); exit; }
+            if ($name === '' || !$cat_id || !$supplier_id || !$unit_id || $price <= 0) { 
+                http_response_code(400); 
+                echo json_encode(['success' => false, 'message' => 'All fields are required']); 
+                exit; 
+            }
+            // Check if unit exists and is active
+            $stmt = $conn->prepare('SELECT status FROM tbl_units WHERE unit_id = ?');
+            $stmt->bind_param('i', $unit_id);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $unit = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            
+            if (!$unit || $unit['status'] != 1) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Selected unit is not available']);
+                exit;
+            }
+            
+            $stmt = $conn->prepare('INSERT INTO tbl_items(item_name, unit_id, item_status, price, cat_id, supplier_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            if (!$stmt) { 
+                http_response_code(500); 
+                echo json_encode(['success' => false, 'message' => 'Database error']); 
+                exit; 
+            }
             $created_by = (int)$_SESSION['user_id'];
-            $stmt->bind_param('ssidiii', $name, $unit, $status, $price, $cat_id, $supplier_id, $created_by);
+            $stmt->bind_param('siidiii', $name, $unit_id, $status, $price, $cat_id, $supplier_id, $created_by);
             $ok = $stmt->execute();
             $id = $stmt->insert_id; $stmt->close();
             echo json_encode(['success' => (bool)$ok, 'item_id' => (int)$id]); exit;
@@ -83,12 +111,35 @@ if ($is_api !== '') {
             $name = isset($input['item_name']) ? trim((string)$input['item_name']) : '';
             $cat_id = isset($input['cat_id']) ? (int)$input['cat_id'] : 0;
             $supplier_id = isset($input['supplier_id']) ? (int)$input['supplier_id'] : 0;
-            $unit = isset($input['item_unit']) ? trim((string)$input['item_unit']) : '';
+            $unit_id = isset($input['unit_id']) ? (int)$input['unit_id'] : 0;
             $price = isset($input['price']) ? (float)$input['price'] : 0;
             $status = isset($input['item_status']) ? (int)$input['item_status'] : 1;
-            if (!$id || $name === '' || !$cat_id || !$supplier_id || $unit === '' || $price <= 0) { http_response_code(400); echo json_encode(['success' => false]); exit; }
-            $stmt = $conn->prepare('UPDATE tbl_items SET item_name = ?, item_unit = ?, item_status = ?, price = ?, cat_id = ?, supplier_id = ? WHERE item_id = ?'); if (!$stmt) { http_response_code(500); echo json_encode(['success' => false]); exit; }
-            $stmt->bind_param('ssidiii', $name, $unit, $status, $price, $cat_id, $supplier_id, $id);
+            if (!$id || $name === '' || !$cat_id || !$supplier_id || !$unit_id || $price <= 0) { 
+                http_response_code(400); 
+                echo json_encode(['success' => false, 'message' => 'All fields are required']); 
+                exit; 
+            }
+            // Check if unit exists and is active
+            $stmt = $conn->prepare('SELECT status FROM tbl_units WHERE unit_id = ?');
+            $stmt->bind_param('i', $unit_id);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $unit = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            
+            if (!$unit || $unit['status'] != 1) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Selected unit is not available']);
+                exit;
+            }
+            
+            $stmt = $conn->prepare('UPDATE tbl_items SET item_name = ?, unit_id = ?, item_status = ?, price = ?, cat_id = ?, supplier_id = ? WHERE item_id = ?');
+            if (!$stmt) { 
+                http_response_code(500); 
+                echo json_encode(['success' => false, 'message' => 'Database error']); 
+                exit; 
+            }
+            $stmt->bind_param('siidiii', $name, $unit_id, $status, $price, $cat_id, $supplier_id, $id);
             $ok = $stmt->execute(); $stmt->close(); echo json_encode(['success' => (bool)$ok]); exit;
         }
         if ($action === 'delete') {
@@ -100,9 +151,176 @@ if ($is_api !== '') {
             $stmt->bind_param('i', $id); $ok = $stmt->execute(); $stmt->close(); echo json_encode(['success' => (bool)$ok]); exit;
         }
         http_response_code(400); echo json_encode(['success' => false]); exit;
+    } elseif ($is_api === 'items-for-stock') {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $sql = 'SELECT i.item_id,i.item_name,i.cat_id,i.supplier_id,i.unit_id,u.unit_name,i.price,i.item_status,c.cat_name,s.supplier_name 
+                    FROM tbl_items i 
+                    LEFT JOIN tbl_categories c ON c.cat_id=i.cat_id 
+                    LEFT JOIN suppliers s ON s.supplier_id=i.supplier_id 
+                    LEFT JOIN tbl_units u ON u.unit_id = i.unit_id 
+                    LEFT JOIN tbl_progress p ON p.item_id = i.item_id
+                    WHERE p.item_id IS NULL
+                    ORDER BY i.item_id DESC';
+            $res = $conn->query($sql); $out = [];
+            if ($res) { while ($row = $res->fetch_assoc()) { $out[] = [ 'item_id' => (int)$row['item_id'], 'item_name' => (string)$row['item_name'], 'cat_id' => (int)$row['cat_id'], 'cat_name' => (string)($row['cat_name'] ?? ''), 'supplier_id' => (int)$row['supplier_id'], 'supplier_name' => (string)($row['supplier_name'] ?? ''), 'unit_id' => (int)$row['unit_id'], 'unit_name' => (string)($row['unit_name'] ?? ''), 'price' => (float)$row['price'], 'item_status' => (int)$row['item_status'] ]; } }
+            echo json_encode(['success' => true, 'data' => $out]); exit;
+        }
+    } elseif ($is_api === 'units') {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $res = $conn->query('SELECT unit_id, unit_name, status, created_at FROM tbl_units ORDER BY unit_id DESC');
+            $out = [];
+            if ($res) { 
+                while ($row = $res->fetch_assoc()) { 
+                    $out[] = [
+                        'unit_id' => (int)$row['unit_id'], 
+                        'unit_name' => (string)$row['unit_name'], 
+                        'status' => (int)$row['status'],
+                        'created_at' => (string)$row['created_at']
+                    ]; 
+                } 
+            }
+            echo json_encode(['success' => true, 'data' => $out]);
+            exit;
+        }
+        
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!is_array($input)) { $input = $_POST; }
+        $action = isset($input['action']) ? (string)$input['action'] : '';
+        
+        if ($action === 'add') {
+            $name = isset($input['unit_name']) ? trim((string)$input['unit_name']) : '';
+            $status = isset($input['status']) ? (int)$input['status'] : 1;
+            
+            if ($name === '') { 
+                http_response_code(400); 
+                echo json_encode(['success' => false, 'message' => 'Unit name is required']); 
+                exit; 
+            }
+            
+            // Check if unit already exists
+            $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM tbl_units WHERE unit_name = ?');
+            $stmt->bind_param('s', $name);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            
+            if ($row && (int)$row['c'] > 0) {
+                http_response_code(409);
+                echo json_encode(['success' => false, 'message' => 'Unit already exists']);
+                exit;
+            }
+            
+            $stmt = $conn->prepare('INSERT INTO tbl_units(unit_name, status) VALUES (?, ?)');
+            if (!$stmt) { 
+                http_response_code(500); 
+                echo json_encode(['success' => false, 'message' => 'Database error']); 
+                exit; 
+            }
+            $stmt->bind_param('si', $name, $status);
+            $ok = $stmt->execute();
+            $id = $stmt->insert_id;
+            $stmt->close();
+            
+            echo json_encode([
+                'success' => (bool)$ok, 
+                'unit_id' => (int)$id,
+                'unit_name' => $name,
+                'status' => $status
+            ]);
+            exit;
+        }
+        
+        if ($action === 'update') {
+            $id = isset($input['unit_id']) ? (int)$input['unit_id'] : 0;
+            $name = isset($input['unit_name']) ? trim((string)$input['unit_name']) : '';
+            $status = isset($input['status']) ? (int)$input['status'] : 1;
+            
+            if (!$id || $name === '') { 
+                http_response_code(400); 
+                echo json_encode(['success' => false, 'message' => 'Invalid input']); 
+                exit; 
+            }
+            
+            // Check if unit with same name exists (excluding current unit)
+            $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM tbl_units WHERE unit_name = ? AND unit_id != ?');
+            $stmt->bind_param('si', $name, $id);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            
+            if ($row && (int)$row['c'] > 0) {
+                http_response_code(409);
+                echo json_encode(['success' => false, 'message' => 'Another unit with this name already exists']);
+                exit;
+            }
+            
+            $stmt = $conn->prepare('UPDATE tbl_units SET unit_name = ?, status = ? WHERE unit_id = ?');
+            if (!$stmt) { 
+                http_response_code(500); 
+                echo json_encode(['success' => false, 'message' => 'Database error']); 
+                exit; 
+            }
+            $stmt->bind_param('sii', $name, $status, $id);
+            $ok = $stmt->execute();
+            $stmt->close();
+            
+            echo json_encode([
+                'success' => (bool)$ok,
+                'unit_id' => $id,
+                'unit_name' => $name,
+                'status' => $status
+            ]);
+            exit;
+        }
+        
+        if ($action === 'delete') {
+            $id = isset($input['unit_id']) ? (int)$input['unit_id'] : 0;
+            if (!$id) { 
+                http_response_code(400); 
+                echo json_encode(['success' => false, 'message' => 'Invalid unit ID']); 
+                exit; 
+            }
+            
+            // Check if unit is in use
+            $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM tbl_items WHERE unit_id = ?');
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $stmt->close();
+            
+            if ($row && (int)$row['c'] > 0) {
+                http_response_code(409);
+                echo json_encode(['success' => false, 'message' => 'Cannot delete: Unit is in use by one or more items']);
+                exit;
+            }
+            
+            $stmt = $conn->prepare('DELETE FROM tbl_units WHERE unit_id = ?');
+            if (!$stmt) { 
+                http_response_code(500); 
+                echo json_encode(['success' => false, 'message' => 'Database error']); 
+                exit; 
+            }
+            $stmt->bind_param('i', $id);
+            $ok = $stmt->execute();
+            $stmt->close();
+            
+            echo json_encode(['success' => (bool)$ok]);
+            exit;
+        }
+        
+        http_response_code(400); 
+        echo json_encode(['success' => false, 'message' => 'Invalid action']);
+        exit;
     } elseif ($is_api === 'stock') {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $sql = 'SELECT s.stock_id,s.item_id,s.qty,s.last_update,i.item_name,i.item_unit FROM tbl_item_stock s LEFT JOIN tbl_items i ON i.item_id=s.item_id ORDER BY s.stock_id DESC';
+            $sql = 'SELECT s.stock_id, s.item_id, s.qty, s.last_update, i.item_name, u.unit_name AS item_unit
+        FROM tbl_item_stock s 
+        LEFT JOIN tbl_items i ON i.item_id = s.item_id 
+        LEFT JOIN tbl_units u ON u.unit_id = i.unit_id 
+        ORDER BY s.stock_id DESC';
             $res = $conn->query($sql); $out = [];
             if ($res) { while ($row = $res->fetch_assoc()) { $out[] = [ 'stock_id' => (int)$row['stock_id'], 'item_id' => (int)$row['item_id'], 'qty' => (float)$row['qty'], 'last_update' => (string)$row['last_update'], 'item_name' => (string)$row['item_name'], 'item_unit' => (string)$row['item_unit'] ]; } }
             echo json_encode(['success' => true, 'data' => $out]); exit;
@@ -146,29 +364,7 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) { 
     <div class="dashboard">
       <?php include __DIR__ . '/sidebar.php'; ?>
       <div class="main-content">
-        <div class="header">
-          <div class="header-left">
-            <button class="mobile-menu-btn" id="mobileMenuBtn">
-              <i class="fas fa-bars"></i>
-            </button>
-            <h1 class="header-title" id="pageTitle">Add Items & Categories</h1>
-          </div>
-          <div class="profile-container">
-            <div class="profile-icon">
-              <i class="fas fa-user"></i>
-            </div>
-            <div class="profile-dropdown">
-              <div class="dropdown-item">
-                <i class="fas fa-user"></i>
-                <span>Profile</span>
-              </div>
-              <div class="dropdown-item logout">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <?php include __DIR__ . '/header.php'; ?>  
         <div class="content">
     <div class="page-header">
       <h1><i class="fas fa-plus-circle"></i> Add Items & Categories</h1>
@@ -180,6 +376,9 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) { 
       <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('categories')">
           <i class="fas fa-tags"></i> Categories
+        </button>
+        <button class="tab-btn" onclick="switchTab('units')">
+          <i class="fas fa-ruler"></i> Units
         </button>
         <button class="tab-btn" onclick="switchTab('items')">
           <i class="fas fa-box"></i> Items
@@ -243,6 +442,62 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) { 
         </div>
       </div>
 
+      <!-- Units Tab -->
+      <div class="tab-content" id="unitsTab">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Add New Unit</h3>
+          </div>
+          <form id="addUnitForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Unit Name <span class="required">*</span></label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="unitName"
+                  placeholder="e.g., PCS, KG, LITER"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select class="form-control" id="unitStatus">
+                  <option value="1">Active</option>
+                  <option value="0">Inactive</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-plus"></i> Add Unit
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header">
+            <h3 class="card-title">Units List</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Unit Name</th>
+                  <th>Status</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="unitsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Items Tab -->
       <div class="tab-content" id="itemsTab">
         <div class="card">
@@ -275,13 +530,9 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) { 
               </div>
               <div class="form-group">
                 <label>Unit <span class="required">*</span></label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="itemUnit"
-                  placeholder="e.g., PCS, KG, LITER"
-                  required
-                />
+                <select class="form-control" id="itemUnit" required>
+                  <option value="">Select unit</option>
+                </select>
               </div>
               <div class="form-group">
                 <label>Price <span class="required">*</span></label>
@@ -398,258 +649,8 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) { 
     </div>
 
     <script src="../js/sidebar.js"></script>
-    <script>
-      let categories = [];
-      let suppliers = [];
-      let items = [];
-      let stock = [];
-      const apiBase = '/SMS/pages/additem.php';
-
-      // Tab switching
-      function switchTab(tab) {
-        const tabs = document.querySelectorAll(".tab-btn");
-        const contents = document.querySelectorAll(".tab-content");
-
-        tabs.forEach(t => t.classList.remove("active"));
-        contents.forEach(c => c.classList.remove("active"));
-
-        // Ensure proper activation without relying on event
-        const btns = Array.from(document.querySelectorAll('.tab-btn'));
-        if (tab === 'categories') btns[0]?.classList.add('active');
-        else if (tab === 'items') btns[1]?.classList.add('active');
-        else btns[2]?.classList.add('active');
-        document.getElementById(tab + "Tab").classList.add("active");
-      }
-
-      // Load dropdowns
-      function loadDropdowns() {
-        // Category dropdown
-        const catSelect = document.getElementById("itemCategory");
-        catSelect.innerHTML = '<option value="">Select category</option>';
-        categories.forEach(cat => {
-          catSelect.innerHTML += `<option value="${cat.cat_id}">${cat.cat_name}</option>`;
-        });
-
-        // Supplier dropdown
-        const suppSelect = document.getElementById("itemSupplier");
-        suppSelect.innerHTML = '<option value="">Select supplier</option>';
-        suppliers.forEach(sup => {
-          suppSelect.innerHTML += `<option value="${sup.supplier_id}">${sup.supplier_name}</option>`;
-        });
-
-        // Stock item dropdown (only items without transactions)
-        const stockSelect = document.getElementById("stockItem");
-        stockSelect.innerHTML = '<option value="">Select an item</option>';
-        items.forEach(item => {
-          stockSelect.innerHTML += `<option value="${item.item_id}">${item.item_name} (${item.item_unit})</option>`;
-        });
-      }
-
-      // Load categories table
-      function loadCategories() {
-        const tbody = document.getElementById("categoriesTableBody");
-        tbody.innerHTML = "";
-
-        if (categories.length === 0) { return; }
-
-        categories.forEach(cat => {
-          tbody.innerHTML += `
-            <tr>
-              <td>${cat.cat_id}</td>
-              <td><strong>${cat.cat_name}</strong></td>
-              <td>${cat.description || '<span style="color: var(--gray-mid)">N/A</span>'}</td>
-              <td>${cat.created_at}</td>
-              <td>
-                <div class="action-buttons">
-                  <button class="btn btn-sm btn-primary" onclick="editCategory(${cat.cat_id})">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-sm btn-danger" onclick="deleteCategory(${cat.cat_id})">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          `;
-        });
-      }
-
-      // Load items table
-      function loadItems() {
-        const tbody = document.getElementById("itemsTableBody");
-        tbody.innerHTML = "";
-
-        if (items.length === 0) { return; }
-
-        items.forEach(item => {
-          const cat = categories.find(c => c.cat_id === item.cat_id);
-          const status = item.item_status === 1 
-            ? '<span class="badge badge-success">Active</span>'
-            : '<span class="badge badge-danger">Inactive</span>';
-
-          tbody.innerHTML += `
-            <tr>
-              <td>${item.item_id}</td>
-              <td><strong>${item.item_name}</strong></td>
-              <td>${cat ? cat.cat_name : 'N/A'}</td>
-              <td>${item.item_unit}</td>
-              <td>$${item.price.toFixed(2)}</td>
-              <td>${status}</td>
-              <td>
-                <div class="action-buttons">
-                  <button class="btn btn-sm btn-primary" onclick="editItem(${item.item_id})">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-sm btn-danger" onclick="deleteItem(${item.item_id})">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          `;
-        });
-      }
-
-      // Load opening stock table
-      function loadOpeningStock() {
-        const tbody = document.getElementById("openingStockTableBody");
-        tbody.innerHTML = "";
-
-        if (stock.length === 0) { return; }
-
-        stock.forEach(s => {
-          const item = items.find(i => i.item_id === s.item_id);
-          if (item) {
-            tbody.innerHTML += `
-              <tr>
-                <td>${item.item_id}</td>
-                <td><strong>${item.item_name}</strong></td>
-                <td>${s.qty}</td>
-                <td>${item.item_unit}</td>
-                <td>${s.last_update}</td>
-              </tr>
-            `;
-          }
-        });
-      }
-
-      // Check if item has transactions
-      function checkItemTransactions() {
-        const itemId = parseInt(document.getElementById("stockItem").value);
-        const warning = document.getElementById("stockWarning");
-        const warningText = document.getElementById("stockWarningText");
-        const submitBtn = document.getElementById("submitStockBtn");
-
-        if (!itemId) {
-          warning.style.display = "none";
-          submitBtn.disabled = false;
-          return;
-        }
-
-        warning.style.display = "none";
-        submitBtn.disabled = false;
-      }
-
-      // Add Category
-      document.getElementById("addCategoryForm").addEventListener("submit", (e) => {
-        e.preventDefault();
-        const name = document.getElementById("catName").value.trim();
-        const desc = document.getElementById("catDescription").value.trim();
-
-        if (!name) return;
-        fetch(`${apiBase}?api=categories`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'add', cat_name: name, description: desc })
-        }).then(r => r.json()).then(resp => {
-          if (resp && resp.success) {
-            document.getElementById("addCategoryForm").reset();
-            fetchCategories();
-            loadDropdowns();
-            Swal.fire({ icon: 'success', title: 'Category Added!', timer: 2000, showConfirmButton: false });
-          }
-        });
-      });
-
-      // Add Item
-      document.getElementById("addItemForm").addEventListener("submit", (e) => {
-        e.preventDefault();
-        
-        const payload = {
-          item_name: document.getElementById('itemName').value.trim(),
-          cat_id: parseInt(document.getElementById('itemCategory').value),
-          supplier_id: parseInt(document.getElementById('itemSupplier').value),
-          item_unit: document.getElementById('itemUnit').value.trim(),
-          price: parseFloat(document.getElementById('itemPrice').value),
-          item_status: parseInt(document.getElementById('itemStatus').value)
-        };
-        if (!payload.item_name || !payload.cat_id || !payload.supplier_id || !payload.item_unit || !payload.price) return;
-        fetch(`${apiBase}?api=items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add', ...payload }) })
-          .then(r => r.json()).then(resp => {
-            if (resp && resp.success) {
-              document.getElementById('addItemForm').reset();
-              fetchItems();
-              fetchStock();
-              loadDropdowns();
-              Swal.fire({ icon: 'success', title: 'Item Added!', text: 'You can now add opening stock for this item', timer: 2000, showConfirmButton: false });
-            }
-          });
-      });
-
-      // Add Opening Stock
-      document.getElementById("addOpeningStockForm").addEventListener("submit", (e) => {
-        e.preventDefault();
-        
-        const itemId = parseInt(document.getElementById('stockItem').value);
-        const qty = parseFloat(document.getElementById('stockQty').value);
-        if (!itemId || !qty || qty <= 0) return;
-        fetch(`${apiBase}?api=stock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add', item_id: itemId, qty }) })
-          .then(r => r.json()).then(resp => {
-            if (resp && resp.success) {
-              document.getElementById('addOpeningStockForm').reset();
-              document.getElementById('stockWarning').style.display = 'none';
-              fetchStock();
-              Swal.fire({ icon: 'success', title: 'Opening Stock Added!', timer: 2000, showConfirmButton: false });
-            } else {
-              Swal.fire({ icon: 'error', title: 'Cannot Add Stock', text: resp && resp.message ? resp.message : 'Error' });
-            }
-          });
-      });
-
-      // Edit/Delete functions (simplified)
-      function editCategory(id) {
-        Swal.fire({ icon: "info", title: "Edit Category", text: "Edit functionality - connect to your API" });
-      }
-
-      function deleteCategory(id) {
-        Swal.fire({ icon: "warning", title: "Delete Category", text: "Delete functionality - connect to your API" });
-      }
-
-      function editItem(id) {
-        Swal.fire({ icon: "info", title: "Edit Item", text: "Edit functionality - connect to your API" });
-      }
-
-      function deleteItem(id) {
-        Swal.fire({ icon: "warning", title: "Delete Item", text: "Delete functionality - connect to your API" });
-      }
-
-      async function fetchCategories() {
-        const r = await fetch(`${apiBase}?api=categories`); const d = await r.json(); categories = d && d.success ? d.data : []; loadCategories();
-      }
-      async function fetchItems() {
-        const r = await fetch(`${apiBase}?api=items`); const d = await r.json(); items = d && d.success ? d.data : []; loadItems();
-      }
-      async function fetchStock() {
-        const r = await fetch(`${apiBase}?api=stock`); const d = await r.json(); stock = d && d.success ? d.data : []; loadOpeningStock();
-      }
-      async function fetchSuppliers() {
-        const r = await fetch('/SMS/pages/supplier.php?api=suppliers'); const d = await r.json(); suppliers = d && d.success ? d.data : []; loadDropdowns();
-      }
-      (async function init(){
-        await fetchCategories();
-        await fetchSuppliers();
-        await fetchItems();
-        await fetchStock();
-      })();
-    </script>
+    <script src="../js/item.js"></script>
+    
   </body>
 </html>
+

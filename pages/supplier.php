@@ -137,125 +137,24 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Suppliers Management</title>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="../css/sidebar.css" />
-    <link rel="stylesheet" href="../css/supplier.css">
+    <link rel="stylesheet" href="../css/supplier.css" />
   </head>
   <body>
     <div class="dashboard">
-      <div class="sidebar-overlay" id="sidebarOverlay"></div>
-      <div class="sidebar" id="sidebar">
-        <div class="logo-container">
-          <a href="index.php?resto=home" class="logo">
-            <div class="logo-icon">WM</div>
-            <span class="logo-text">Workshop Pro</span>
-          </a>
-        </div>
-        <div class="menu">
-          <a class="menu-item" href="index.php?resto=home">
-            <div class="menu-item-content">
-              <i class="fas fa-home"></i>
-              <span class="menu-item-text">Home</span>
-            </div>
-          </a>
-          <a class="menu-item" href="index.php?resto=sell">
-            <div class="menu-item-content">
-              <i class="fas fa-shopping-cart"></i>
-              <span class="menu-item-text">Sell</span>
-            </div>
-          </a>
-          <div class="menu-item" data-dropdown="true" data-page="stock">
-            <div class="menu-item-content">
-              <i class="fas fa-box"></i>
-              <span class="menu-item-text">Stock</span>
-            </div>
-            <i class="fas fa-chevron-right menu-item-arrow"></i>
-          </div>
-          <div class="submenu" id="stock-submenu">
-            <a class="submenu-item" href="index.php?resto=purchase">
-              <i class="fas fa-file-import"></i>
-              <span>Purchase Request</span>
-            </a>
-            <div class="submenu-item" data-page="add-stock">
-              <i class="fas fa-plus-circle"></i>
-              <span>Add Stock</span>
-            </div>
-            <div class="submenu-item" data-page="damaged-goods">
-              <i class="fas fa-exclamation-triangle"></i>
-              <span>Damaged Goods</span>
-            </div>
-          </div>
-          <div class="menu-item" data-dropdown="true" data-page="reports">
-            <div class="menu-item-content">
-              <i class="fas fa-chart-bar"></i>
-              <span class="menu-item-text">Reports</span>
-            </div>
-            <i class="fas fa-chevron-right menu-item-arrow"></i>
-          </div>
-          <div class="submenu" id="reports-submenu">
-            <a class="submenu-item" href="index.php?resto=cogs">
-              <i class="fas fa-dollar-sign"></i>
-              <span>Cost of Goods Sold</span>
-            </a>
-            <div class="submenu-item" data-page="damaged-report">
-              <i class="fas fa-exclamation-triangle"></i>
-              <span>Damaged Goods</span>
-            </div>
-            <a class="submenu-item" href="index.php?resto=supplier-report">
-              <i class="fas fa-users"></i>
-              <span>Supplier Report</span>
-            </a>
-          </div>
-          <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
-          <a class="menu-item" href="index.php?resto=user">
-            <div class="menu-item-content">
-              <i class="fas fa-cog"></i>
-              <span class="menu-item-text">System Admin</span>
-            </div>
-          </a>
-          <?php } ?>
-        </div>
-        <div class="toggle-btn" id="toggleBtn">
-          <i class="fas fa-bars"></i>
-        </div>
-      </div>
+      <?php include __DIR__ . '/sidebar.php'; ?>
       <div class="main-content">
-        <div class="header">
-          <div class="header-left">
-            <button class="mobile-menu-btn" id="mobileMenuBtn">
-              <i class="fas fa-bars"></i>
-            </button>
-            <h1 class="header-title" id="pageTitle">Suppliers</h1>
-          </div>
-          <div class="profile-container">
-            <div class="profile-icon">
-              <i class="fas fa-user"></i>
-            </div>
-            <div class="profile-dropdown">
-              <div class="dropdown-item">
-                <i class="fas fa-user"></i>
-                <span>Profile</span>
-              </div>
-              <div class="dropdown-item logout">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-              </div>
-            </div>
-          </div>
-        </div>
+       <?php include __DIR__ . '/header.php'; ?>
         <div class="content">
-    <div class="page-header">
-      <h1><i class="fas fa-truck"></i> Suppliers Management</h1>
-      <p>Manage your suppliers and their information</p>
-    </div>
+          <div class="page-header">
+            <h1><i class="fas fa-truck"></i> Suppliers Management</h1>
+            <p>Manage your suppliers and their information</p>
+          </div>
 
-    <div class="container">
-      <!-- Statistics -->
-      <div class="stats-grid">
+      <div class="container">
+        <!-- Statistics -->
+        <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon blue">
             <i class="fas fa-truck"></i>
@@ -365,7 +264,6 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) {
           </table>
         </div>
       </div>
-    </div>
         </div>
       </div>
     </div>
