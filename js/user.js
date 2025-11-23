@@ -36,6 +36,16 @@ function loadRoles() {
   tbody.innerHTML = "";
 
   if (roles.length === 0) {
+    tbody.innerHTML = `
+            <tr>
+              <td colspan="3">
+                <div class="empty-state">
+                  <i class="fas fa-user-tag"></i>
+                  <p>No roles found. Add your first role!</p>
+                </div>
+              </td>
+            </tr>
+          `;
     return;
   }
 
@@ -68,6 +78,16 @@ function loadUsers() {
   tbody.innerHTML = "";
 
   if (users.length === 0) {
+    tbody.innerHTML = `
+            <tr>
+              <td colspan="7">
+                <div class="empty-state">
+                  <i class="fas fa-users"></i>
+                  <p>No users found. Add your first user!</p>
+                </div>
+              </td>
+            </tr>
+          `;
     return;
   }
 

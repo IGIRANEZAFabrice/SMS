@@ -66,7 +66,7 @@
     <a class="menu-item" href="index.php?resto=user">
       <div class="menu-item-content">
         <i class="fas fa-cog"></i>
-        <span class="menu-item-text">System Admin</span>
+        <span class="menu-item-text"> Users</span>
       </div>
     </a>
     <?php } ?>

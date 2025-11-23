@@ -183,4 +183,29 @@ CREATE TABLE receipt_items (
 
 
 
- make this ga as well be connected to the databse and with a sidebar as well and refer to the db 
+
+
+
+
+
+
+
+
+
+
+CREATE TABLE tbl_units (
+    unit_id INT AUTO_INCREMENT PRIMARY KEY,
+    unit_name VARCHAR(50) NOT NULL,
+    status INT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Modify tbl_items to use unit_id instead of item_unit
+ALTER TABLE tbl_items 
+    DROP COLUMN item_unit,
+    ADD COLUMN unit_id INT AFTER item_name,
+    ADD CONSTRAINT fk_item_unit FOREIGN KEY (unit_id) REFERENCES tbl_units(unit_id);
+
+
+
+ 
