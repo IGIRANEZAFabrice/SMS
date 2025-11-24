@@ -1,67 +1,17 @@
-// Sample data (replace with API calls)
-const categories = [
-  { cat_id: 1, cat_name: "Electronics" },
-  { cat_id: 2, cat_name: "Hardware" },
-  { cat_id: 3, cat_name: "Tools" },
-  { cat_id: 4, cat_name: "Parts" },
-];
+let categories = [];
+let stockData = [];
+let filteredData = [];
 
-const stockData = [
-  {
-    item_id: 1,
-    item_name: "Laptop Battery",
-    cat_id: 1,
-    qty: 45,
-    item_unit: "PCS",
-    price: 50.0,
-  },
-  {
-    item_id: 2,
-    item_name: "Screwdriver Set",
-    cat_id: 3,
-    qty: 8,
-    item_unit: "SET",
-    price: 25.0,
-  },
-  {
-    item_id: 3,
-    item_name: "Brake Pads",
-    cat_id: 4,
-    qty: 0,
-    item_unit: "SET",
-    price: 75.0,
-  },
-  {
-    item_id: 4,
-    item_name: "Power Supply",
-    cat_id: 1,
-    qty: 120,
-    item_unit: "PCS",
-    price: 80.0,
-  },
-  {
-    item_id: 5,
-    item_name: "Hammer",
-    cat_id: 3,
-    qty: 15,
-    item_unit: "PCS",
-    price: 20.0,
-  },
-  {
-    item_id: 6,
-    item_name: "Engine Oil Filter",
-    cat_id: 4,
-    qty: 5,
-    item_unit: "PCS",
-    price: 12.0,
-  },
-];
-
-let filteredData = [...stockData];
+// API Base URL
+const API_URL = "api/items.php";
 
 // Load categories into filter
 function loadCategoryFilter() {
   const select = document.getElementById("categoryFilter");
+  if (!select) return; // Ensure element exists
+
+  select.innerHTML = '<option value="">All Categories</option>'; // Clear existing options and add default
+
   categories.forEach((cat) => {
     const option = document.createElement("option");
     option.value = cat.cat_id;
@@ -84,29 +34,20 @@ function getStockStatus(qty) {
 }
 
 // Calculate statistics
-function updateStats() {
-  document.getElementById("totalItems").textContent = stockData.length;
-
-  const totalValue = stockData.reduce(
-    (sum, item) => sum + item.qty * item.price,
-    0
-  );
-  document.getElementById("totalValue").textContent = `$${totalValue.toFixed(
+function updateStats(stats) {
+  document.getElementById("totalItems").textContent = stats.totalItems;
+  document.getElementById("totalValue").textContent = `$${stats.totalValue.toFixed(
     2
   )}`;
-
-  const lowStock = stockData.filter(
-    (item) => item.qty > 0 && item.qty <= 10
-  ).length;
-  document.getElementById("lowStockItems").textContent = lowStock;
-
-  const outOfStock = stockData.filter((item) => item.qty === 0).length;
-  document.getElementById("outOfStock").textContent = outOfStock;
+  document.getElementById("lowStockItems").textContent = stats.lowStockItems;
+  document.getElementById("outOfStock").textContent = stats.outOfStock;
 }
 
 // Load stock table
 function loadStockTable(data = filteredData) {
   const tbody = document.getElementById("stockTableBody");
+  if (!tbody) return; // Ensure element exists
+
   tbody.innerHTML = "";
 
   if (data.length === 0) {
@@ -135,7 +76,8 @@ function loadStockTable(data = filteredData) {
             <tr>
               <td><strong>#${item.item_id
                 .toString()
-                .padStart(4, "0")}</strong></td>
+                .padStart(4, "0")}
+</strong></td>
               <td>${item.item_name}</td>
               <td>${getCategoryName(item.cat_id)}</td>
               <td class="text-right"><strong>${item.qty}</strong></td>
@@ -178,9 +120,9 @@ function filterByStatus() {
 
 // Apply all filters
 function applyFilters() {
-  const categoryFilter = document.getElementById("categoryFilter").value;
-  const statusFilter = document.getElementById("statusFilter").value;
-  const searchText = document.getElementById("searchStock").value.toLowerCase();
+  const categoryFilter = document.getElementById("categoryFilter")?.value;
+  const statusFilter = document.getElementById("statusFilter")?.value;
+  const searchText = document.getElementById("searchStock")?.value.toLowerCase() || '';
 
   filteredData = stockData.filter((item) => {
     // Search filter
@@ -232,7 +174,43 @@ function exportStock() {
   window.URL.revokeObjectURL(url);
 }
 
-// Initialize
-loadCategoryFilter();
-updateStats();
-loadStockTable();
+// Initialize function to fetch data and set up the page
+async function initStockPage() {
+  try {
+    // Fetch categories
+    const categoriesResponse = await fetch(`${API_URL}?action=getCategories`);
+    const categoriesResult = await categoriesResponse.json();
+    if (categoriesResult.success) {
+      categories = categoriesResult.categories;
+      loadCategoryFilter();
+    } else {
+      console.error("Failed to fetch categories:", categoriesResult.message);
+    }
+
+    // Fetch stock data
+    const stockResponse = await fetch(`${API_URL}?action=getStockData`);
+    const stockResult = await stockResponse.json();
+    if (stockResult.success) {
+      stockData = stockResult.stockData;
+      filteredData = [...stockData]; // Initialize filtered data
+      loadStockTable();
+    } else {
+      console.error("Failed to fetch stock data:", stockResult.message);
+    }
+
+    // Fetch stats
+    const statsResponse = await fetch(`${API_URL}?action=getStockStats`);
+    const statsResult = await statsResponse.json();
+    if (statsResult.success) {
+      updateStats(statsResult.stats);
+    } else {
+      console.error("Failed to fetch stock stats:", statsResult.message);
+    }
+  } catch (error) {
+    console.error("Error initializing stock page:", error);
+    // Display an error message to the user if needed
+  }
+}
+
+// Call the initialize function when the DOM is fully loaded
+document.addEventListener("DOMContentLoaded", initStockPage);

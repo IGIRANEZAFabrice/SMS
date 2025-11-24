@@ -81,6 +81,14 @@
       </a>
     </div>
     <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
+    <a class="menu-item" href="index.php?resto=progress">
+      <div class="menu-item-content">
+        <i class="fas fa-tasks"></i>
+        <span class="menu-item-text"> Item Progress</span>
+      </div>
+    </a>
+    <?php } ?>
+    <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
     <a class="menu-item" href="index.php?resto=user">
       <div class="menu-item-content">
         <i class="fas fa-cog"></i>

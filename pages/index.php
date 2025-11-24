@@ -38,6 +38,10 @@ switch ($view) {
         $title = 'Manage Receipts';
         $page = 'receipt.php';
         break;
+    case 'progress':
+        $title = 'Items progress';
+        $page = 'progress.php';
+        break;
     case 'add':
         $title = 'Add New Items In stock';
         $page = 'additem.php';

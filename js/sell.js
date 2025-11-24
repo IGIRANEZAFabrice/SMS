@@ -25,12 +25,12 @@ function setupEventListeners() {
 
 async function fetchItems() {
   try {
-    const response = await fetch("../api/items.php");
+    const response = await fetch("../api/items.php?action=getStockData");
     if (!response.ok) throw new Error("Network response was not ok");
     
     const data = await response.json();
-    if (data.success && Array.isArray(data.items)) {
-      items = data.items;
+    if (data.success && Array.isArray(data.stockData)) {
+      items = data.stockData;
     } else {
       throw new Error(data.message || "Failed to parse items");
     }
@@ -42,10 +42,10 @@ async function fetchItems() {
 
 function renderItemGrid(filter = "") {
   const grid = document.getElementById("itemsGrid");
-  const searchTerm = filter.toLowerCase();
+  const searchTerm = filter.toLowerCase().trim();
   
   const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchTerm)
+    item.item_name && item.item_name.toLowerCase().includes(searchTerm)
   );
 
   if (filteredItems.length === 0) {
@@ -53,16 +53,19 @@ function renderItemGrid(filter = "") {
     return;
   }
   
-  grid.innerHTML = filteredItems.map(item => `
+  grid.innerHTML = filteredItems.map(item => {
+    const price = parseFloat(item.min_price || item.price || 0);
+    const stock = parseFloat(item.qty || 0);
+    
+    return `
     <div class="item-card" onclick="addToCart(${item.item_id})">
-      <div class="item-name">${item.name}</div>
-      <div class="item-price">$${parseFloat(item.min_price).toFixed(2)}</div>
-     
-      <div class="item-stock ${item.stock < 5 ? 'stock-low' : ''}">
-        Stock: ${item.stock}
+      <div class="item-name">${item.item_name || 'Unnamed Item'}</div>
+      <div class="item-price">RWF ${price.toFixed(2)}</div>
+      <div class="item-stock ${stock < 5 ? 'stock-low' : ''}">
+        Stock: ${stock} ${item.item_unit || ''}
       </div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 }
 
 function handleSearch(event) {
@@ -71,22 +74,35 @@ function handleSearch(event) {
 
 function addToCart(itemId) {
   const item = items.find(i => i.item_id === itemId);
-  if (!item) return;
+  if (!item) {
+    showAlert("Item not found.", "error");
+    return;
+  }
 
   const cartItem = cart.find(ci => ci.item_id === itemId);
-
-  // Determine initial price: use item.price if available, else item.min_price
-  const initialSellingPrice = parseFloat(item.min_price);
+  const availableStock = parseFloat(item.qty || 0);
+  
+  // Determine initial selling price: use min_price if available, otherwise use price
+  const initialSellingPrice = parseFloat(item.min_price || item.price || 0);
 
   if (cartItem) {
-    if (cartItem.qty < item.stock) {
+    if (cartItem.qty < availableStock) {
       cartItem.qty++;
     } else {
-      showAlert("Not enough stock available.", "warning");
+      showAlert(`Only ${availableStock} ${item.item_unit || 'items'} available in stock.`, "warning");
+      return;
     }
   } else {
-    if (item.stock > 0) {
-      cart.push({ ...item, qty: 1, price: initialSellingPrice }); // Add item with initial selling price
+    if (availableStock > 0) {
+      // Create a new cart item with all necessary properties
+      cart.push({
+        ...item,
+        qty: 1,
+        price: initialSellingPrice,
+        stock: availableStock,  // Ensure stock is properly set
+        name: item.item_name,   // Ensure name is available for display
+        min_price: parseFloat(item.min_price || item.price || 0)
+      });
     } else {
       showAlert("Item is out of stock.", "warning");
     }
@@ -120,12 +136,12 @@ function renderCart() {
             <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
           </div>
           <div class="price-info">
-            <span class="min-price-display">Min: $${parseFloat(item.min_price).toFixed(2)}</span>
+            <span class="min-price-display">Min-price: ${parseFloat(item.min_price).toFixed(2)} RWF</span>
             <input type="number" class="selling-price-input" value="${parseFloat(item.min_price).toFixed(2)}"
                    step="0.01" min="${parseFloat(item.min_price).toFixed(2)}"
                    onchange="updateSellingPrice(${index}, this.value)">
           </div>
-          <span class="item-total">$${(item.price * item.qty).toFixed(2)}</span>
+          <span class="item-total">${(item.price * item.qty).toFixed(2)} RWF</span>
         </div>
       </div>
     `).join("");
@@ -149,7 +165,7 @@ function updateSellingPrice(index, value) {
   // Get original item details to access min_price
   const originalItem = items.find(i => i.item_id === item.item_id);
   if (newPrice < originalItem.min_price) {
-    showAlert(`Selling price for ${item.name} cannot be less than its minimum price ($${parseFloat(originalItem.min_price).toFixed(2)}).`, "warning");
+    showAlert(`Selling price for ${item.name} cannot be less than its minimum price (${parseFloat(originalItem.min_price).toFixed(2)} RWF).`, "warning");
     renderCart(); // Re-render to revert to last valid price
     return;
   }
@@ -218,8 +234,8 @@ function updateTotals() {
   const discount = parseFloat(document.getElementById("discountInput").value) || 0;
   const grandTotal = Math.max(0, subtotal - discount);
 
-  document.getElementById("subtotal").textContent = `$${subtotal.toFixed(2)}`;
-  document.getElementById("grandTotal").textContent = `$${grandTotal.toFixed(2)}`;
+  document.getElementById("subtotal").textContent = `RWF ${subtotal.toFixed(2)}`;
+  document.getElementById("grandTotal").textContent = `RWF ${grandTotal.toFixed(2)}`;
   document.getElementById("checkoutBtn").disabled = cart.length === 0;
 }
 
@@ -286,8 +302,8 @@ function showReceiptModal(receipt) {
           <tr>
             <td>${item.name}</td>
             <td class="text-right">${item.qty}</td>
-            <td class="text-right">$${parseFloat(item.price).toFixed(2)}</td>
-            <td class="text-right">$${parseFloat(item.total).toFixed(2)}</td>
+            <td class="text-right">${parseFloat(item.price).toFixed(2)} RWF</td>
+            <td class="text-right">${parseFloat(item.total).toFixed(2)} RWF</td>
           </tr>
         `).join('')}
       </tbody>
@@ -295,15 +311,15 @@ function showReceiptModal(receipt) {
     <div class="receipt-totals">
       <div class="total-row">
         <span>Subtotal</span>
-        <span>$${parseFloat(receipt.subtotal).toFixed(2)}</span>
+        <span>${parseFloat(receipt.subtotal).toFixed(2)} RWF</span>
       </div>
       <div class="total-row">
         <span>Discount</span>
-        <span>$${parseFloat(receipt.discount).toFixed(2)}</span>
+        <span>${parseFloat(receipt.discount).toFixed(2)} RWF</span>
       </div>
       <div class="total-row grand-total">
         <span>Grand Total</span>
-        <span>$${parseFloat(receipt.grand_total).toFixed(2)}</span>
+        <span>${parseFloat(receipt.grand_total).toFixed(2)} RWF</span>
       </div>
     </div>
     <div class="receipt-footer">

@@ -1,3 +1,10 @@
+<?php
+require_once __DIR__ . '/../config/db.php';
+if (!isset($_SESSION['user_id'])) {
+    header('Location: /SMS/index.php?page=login');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -8,9 +15,16 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
+    <link rel="stylesheet" href="../css/sidebar.css" />
     <link rel="stylesheet" href="../css/progress.css">
   </head>
   <body>
+    <div class="dashboard">
+      <?php include __DIR__ . '/sidebar.php'; ?>
+      <div class="main-content">
+       <?php include __DIR__ . '/header.php'; ?>
+        <div class="content">
+          <div class="container">
     <div class="page-header">
       <h1><i class="fas fa-chart-line"></i> Item Progress</h1>
       <p>View detailed transaction history for any item</p>
@@ -138,8 +152,11 @@
           <p>Please select an item from the dropdown above to view its progress</p>
         </div>
       </div>
+          </div>
+        </div>
+      </div>
     </div>
-
-  <script src="../js/progress.js"></script>   
+    <script src="../js/sidebar.js"></script>
+    <script src="../js/progress.js"></script>
   </body>
 </html>

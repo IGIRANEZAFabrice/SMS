@@ -94,15 +94,15 @@ if (isset($_GET['api'])) {
             $stmt_update_item = $conn->prepare("UPDATE tbl_items SET price = ? WHERE item_id = ?");
             if (!$stmt_update_item) throw new Exception("Prepare failed (stmt_update_item): " . $conn->error);
 
-            $stmt_update_stock = $conn->prepare("
-                INSERT INTO tbl_item_stock (item_id, qty) VALUES (?, ?)
-                ON DUPLICATE KEY UPDATE qty = qty + ?
-            ");
+            $stmt_update_stock = $conn->prepare("UPDATE tbl_item_stock SET qty = ? WHERE item_id = ?");
             if (!$stmt_update_stock) throw new Exception("Prepare failed (stmt_update_stock): " . $conn->error);
 
+            $stmt_insert_stock = $conn->prepare("INSERT INTO tbl_item_stock (item_id, qty) VALUES (?, ?)");
+            if (!$stmt_insert_stock) throw new Exception("Prepare failed (stmt_insert_stock): " . $conn->error);
+
             $stmt_progress = $conn->prepare("
-                INSERT INTO tbl_progress (item_id, date, in_qty, last_qty, end_qty, new_price, avg_cost, remark, created_by)
-                VALUES (?, CURDATE(), ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tbl_progress (item_id, date, in_qty, last_qty, end_qty, new_price, remark, created_by)
+                VALUES (?, CURDATE(), ?, ?, ?, ?, ?, ?)
             ");
             if (!$stmt_progress) throw new Exception("Prepare failed (stmt_progress): " . $conn->error);
 
@@ -120,6 +120,8 @@ if (isset($_GET['api'])) {
                 $res_old = $stmt_old->get_result()->fetch_assoc();
                 $old_qty = (float)($res_old['old_qty'] ?? 0);
                 $old_price = (float)($res_old['old_price'] ?? 0);
+                $stock_exists = isset($res_old['old_qty']);
+                $end_qty = $old_qty + $new_qty;
 
                 // 2. Calculate Weighted Average Cost
                 $total_qty = $old_qty + $new_qty;
@@ -131,14 +133,18 @@ if (isset($_GET['api'])) {
                 $stmt_update_item->bind_param("di", $avg_cost, $item_id);
                 $stmt_update_item->execute();
 
-                // 4. Update stock quantity
-                $stmt_update_stock->bind_param("idd", $item_id, $new_qty, $new_qty);
-                $stmt_update_stock->execute();
+                // 4. Update or Insert stock quantity
+                if ($stock_exists) {
+                    $stmt_update_stock->bind_param("di", $end_qty, $item_id);
+                    $stmt_update_stock->execute();
+                } else {
+                    $stmt_insert_stock->bind_param("id", $item_id, $end_qty);
+                    $stmt_insert_stock->execute();
+                }
                 
                 // 5. Record in tbl_progress
-                $end_qty = $old_qty + $new_qty;
                 $remark = "Received from PO #{$request_id}";
-                $stmt_progress->bind_param("idddddsi", $item_id, $new_qty, $old_qty, $end_qty, $new_price, $avg_cost, $remark, $user_id);
+                $stmt_progress->bind_param("iddddsi", $item_id, $new_qty, $old_qty, $end_qty, $new_price, $remark, $user_id);
                 $stmt_progress->execute();
             }
 

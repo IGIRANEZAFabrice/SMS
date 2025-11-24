@@ -138,7 +138,7 @@ function loadItems() {
               <td><strong>${item.item_name}</strong></td>
               <td>${cat ? cat.cat_name : "N/A"}</td>
               <td>${item.unit_name}</td>
-              <td>$${item.price.toFixed(2)}</td>
+              <td>${item.price.toFixed(2)} RWF</td>
               <td>${status}</td>
               <td>
                 <div class="action-buttons">
@@ -202,31 +202,41 @@ function checkItemTransactions() {
 }
 
 // Add Category
-document.getElementById("addCategoryForm").addEventListener("submit", (e) => {
+document.getElementById("addCategoryForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = document.getElementById("catName").value.trim();
   const desc = document.getElementById("catDescription").value.trim();
 
-  if (!name) return;
-  fetch(`${apiBase}?api=categories`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "add", cat_name: name, description: desc }),
-  })
-    .then((r) => r.json())
-    .then((resp) => {
-      if (resp && resp.success) {
-        document.getElementById("addCategoryForm").reset();
-        fetchCategories();
-        loadDropdowns();
-        Swal.fire({
-          icon: "success",
-          title: "Category Added!",
-          timer: 2000,
-          showConfirmButton: false,
-        });
-      }
+  if (!name) {
+    showAlert("error", "Error", "Category name is required.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBase}?api=categories`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add", cat_name: name, description: desc }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    
+    const resp = await response.json();
+    if (resp && resp.success) {
+      document.getElementById("addCategoryForm").reset();
+      await fetchCategories();
+      loadDropdowns();
+      showAlert("success", "Category Added!", "The new category has been added successfully.");
+    } else {
+      throw new Error(resp.message || "Failed to add category");
+    }
+  } catch (error) {
+    console.error("Error adding category:", error);
+    showAlert("error", "Error", error.message || "Failed to add category. Please try again.");
+  }
 });
 
 // Function to show alerts using SweetAlert2
@@ -310,12 +320,19 @@ async function addItemForm(e) {
       body: new URLSearchParams(postData).toString(),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.success) {
       showAlert("success", "Success", "Item added successfully");
       form.reset();
       await fetchItems();
+      await fetchItemsForStock(); // Also refresh items for stock dropdown
+      loadDropdowns();
 
       // Switch to items tab if not already there
       switchTab("items");
@@ -388,6 +405,11 @@ async function addOpeningStock(e) {
       body: `action=add&item_id=${itemId}&qty=${quantityValue}`,
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.success) {
@@ -443,36 +465,80 @@ function deleteItem(id) {
 }
 
 async function fetchCategories() {
-  const r = await fetch(`${apiBase}?api=categories`);
-  const d = await r.json();
-  categories = d && d.success ? d.data : [];
-  loadCategories();
+  try {
+    const r = await fetch(`${apiBase}?api=categories`);
+    if (!r.ok) {
+      const errorData = await r.json();
+      throw new Error(errorData.message || `HTTP error! status: ${r.status}`);
+    }
+    const d = await r.json();
+    categories = d && d.success ? d.data : [];
+    loadCategories();
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    showAlert("error", "Error", error.message || "Failed to fetch categories. Please try again.");
+    categories = [];
+  }
 }
 
 async function fetchItems() {
-  const r = await fetch(`${apiBase}?api=items`);
-  const d = await r.json();
-  items = d && d.success ? d.data : [];
-  loadItems();
+  try {
+    const r = await fetch(`${apiBase}?api=items`);
+    if (!r.ok) {
+      const errorData = await r.json();
+      throw new Error(errorData.message || `HTTP error! status: ${r.status}`);
+    }
+    const d = await r.json();
+    items = d && d.success ? d.data : [];
+    loadItems();
+  } catch (error) {
+    console.error("Error fetching items:", error);
+    showAlert("error", "Error", error.message || "Failed to fetch items. Please try again.");
+    items = [];
+  }
 }
 
 async function fetchItemsForStock() {
-  const r = await fetch(`${apiBase}?api=items-for-stock`);
-  const d = await r.json();
-  itemsForStock = d && d.success ? d.data : [];
+  try {
+    const r = await fetch(`${apiBase}?api=items-for-stock`);
+    if (!r.ok) {
+      const errorData = await r.json();
+      throw new Error(errorData.message || `HTTP error! status: ${r.status}`);
+    }
+    const d = await r.json();
+    itemsForStock = d && d.success ? d.data : [];
+  } catch (error) {
+    console.error("Error fetching items for stock:", error);
+    showAlert("error", "Error", error.message || "Failed to fetch items for stock. Please try again.");
+    itemsForStock = [];
+  }
 }
 
 async function fetchStock() {
-  const r = await fetch(`${apiBase}?api=stock`);
-  const d = await r.json();
-  stock = d && d.success ? d.data : [];
-  loadOpeningStock();
+  try {
+    const r = await fetch(`${apiBase}?api=stock`);
+    if (!r.ok) {
+      const errorData = await r.json();
+      throw new Error(errorData.message || `HTTP error! status: ${r.status}`);
+    }
+    const d = await r.json();
+    stock = d && d.success ? d.data : [];
+    loadOpeningStock();
+  } catch (error) {
+    console.error("Error fetching stock:", error);
+    showAlert("error", "Error", error.message || "Failed to fetch stock. Please try again.");
+    stock = [];
+  }
 }
 
 // Function to fetch units
 async function fetchUnits() {
   try {
     const response = await fetch('additem.php?api=units');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
     const data = await response.json();
     
     if (data.success) {
@@ -485,44 +551,8 @@ async function fetchUnits() {
     }
   } catch (error) {
     console.error('Error fetching units:', error);
-    showAlert('error', 'Error', 'Failed to load units. Please try again.');
+    showAlert('error', 'Error', error.message || 'Failed to load units. Please try again.');
   }
-}
-
-// Function to load units table
-function loadUnits() {
-  const tbody = document.getElementById('unitsTableBody');
-  if (!tbody) return;
-  
-  if (units.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center">No units found</td></tr>';
-    return;
-  }
-  
-  tbody.innerHTML = '';
-  
-  units.forEach(unit => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${unit.unit_id}</td>
-      <td>${unit.unit_name}</td>
-      <td>
-        <span class="badge ${unit.status === 1 ? 'badge-success' : 'badge-danger'}">
-          ${unit.status === 1 ? 'Active' : 'Inactive'}
-        </span>
-      </td>
-      <td>${new Date(unit.created_at).toLocaleDateString()}</td>
-      <td class="action-buttons">
-        <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.unit_id})">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.unit_id}, '${unit.unit_name}')">
-          <i class="fas fa-trash"></i>
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
 }
 
 // Function to handle add unit form submission
@@ -555,16 +585,15 @@ async function handleAddUnit(e) {
       body: `action=add&unit_name=${encodeURIComponent(unitName)}&status=${unitStatus}`
     });
     
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
     const data = await response.json();
     
     if (data.success) {
-      Swal.fire({
-        icon: 'success',
-        title: 'Unit Added!',
-        text: 'The new unit has been added successfully.',
-        timer: 2000,
-        showConfirmButton: false
-      });
+      showAlert('success', 'Unit Added!', 'The new unit has been added successfully.');
       document.getElementById('addUnitForm').reset();
       await fetchUnits();
       loadDropdowns(); // Refresh the units dropdown
@@ -625,6 +654,11 @@ async function editUnit(unitId) {
           body: `action=update&unit_id=${unitId}&unit_name=${encodeURIComponent(unitName)}&status=${status}`
         });
         
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
         
         if (!data.success) {
@@ -678,6 +712,11 @@ async function deleteUnit(unitId, unitName) {
         body: `action=delete&unit_id=${unitId}`
       });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       
       if (data.success) {
@@ -695,15 +734,25 @@ async function deleteUnit(unitId, unitName) {
 }
 
 async function fetchSuppliers() {
-  const r = await fetch("/SMS/pages/supplier.php?api=suppliers");
-  const d = await r.json();
-  suppliers = d && d.success ? d.data : [];
-  loadDropdowns();
+  try {
+    const r = await fetch("/SMS/pages/supplier.php?api=suppliers");
+    if (!r.ok) {
+      const errorData = await r.json();
+      throw new Error(errorData.message || `HTTP error! status: ${r.status}`);
+    }
+    const d = await r.json();
+    suppliers = d && d.success ? d.data : [];
+    loadDropdowns();
+  } catch (error) {
+    console.error("Error fetching suppliers:", error);
+    showAlert("error", "Error", error.message || "Failed to fetch suppliers. Please try again.");
+    suppliers = [];
+  }
 }
 
 (async function init() {
   document.getElementById('addUnitForm').addEventListener('submit', handleAddUnit);
-  await Promise.all([
+  await Promise.allSettled([ // Use Promise.allSettled to ensure all fetches attempt to complete
     fetchCategories(),
     fetchSuppliers(),
     fetchUnits(),
@@ -711,5 +760,5 @@ async function fetchSuppliers() {
     fetchItemsForStock(),
     fetchStock()
   ]);
-  loadDropdowns();
+  loadDropdowns(); // Load dropdowns after all fetches
 })();

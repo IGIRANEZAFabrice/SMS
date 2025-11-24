@@ -1,68 +1,32 @@
-// Mock data - Replace with PHP/MySQL fetch later
-let purchaseRequests = [
-  {
-    request_id: 1,
-    supplier_id: 1,
-    supplier_name: "Tech Suppliers Ltd",
-    request_date: "2024-11-20",
-    status: "pending",
-    created_by: 1,
-    created_by_name: "John Admin",
-    created_at: "2024-11-20 10:30:00",
-    items: [
-      { item_id: 1, item_name: "Laptop Dell XPS", qty_requested: 10 },
-      { item_id: 2, item_name: "iPhone 14 Pro", qty_requested: 5 },
-    ],
-  },
-  {
-    request_id: 2,
-    supplier_id: 2,
-    supplier_name: "Office Supplies Co",
-    request_date: "2024-11-19",
-    status: "approved",
-    created_by: 2,
-    created_by_name: "Jane Manager",
-    created_at: "2024-11-19 14:15:00",
-    items: [
-      { item_id: 6, item_name: "Magic Mouse", qty_requested: 20 },
-      { item_id: 7, item_name: "Mechanical Keyboard", qty_requested: 15 },
-    ],
-  },
-  {
-    request_id: 3,
-    supplier_id: 3,
-    supplier_name: "Electronics Hub",
-    request_date: "2024-11-18",
-    status: "received",
-    created_by: 1,
-    created_by_name: "John Admin",
-    created_at: "2024-11-18 09:00:00",
-    items: [{ item_id: 3, item_name: "Samsung Galaxy S23", qty_requested: 8 }],
-  },
-  {
-    request_id: 4,
-    supplier_id: 1,
-    supplier_name: "Tech Suppliers Ltd",
-    request_date: "2024-11-22",
-    status: "pending",
-    created_by: 3,
-    created_by_name: "Mike Staff",
-    created_at: "2024-11-22 11:45:00",
-    items: [
-      { item_id: 4, item_name: "iPad Air", qty_requested: 12 },
-      { item_id: 5, item_name: "AirPods Pro", qty_requested: 25 },
-    ],
-  },
-];
-
+let purchaseRequests = [];
 let currentFilter = "all";
 
+// API Base URL
+const API_URL = "api/requests.php";
+
 // Initialize
-document.addEventListener("DOMContentLoaded", function () {
-  loadRequests();
-  setupFilters();
-  updateStats();
-});
+document.addEventListener("DOMContentLoaded", initRequestsPage);
+
+async function initRequestsPage() {
+  try {
+    const response = await fetch(`${API_URL}?action=getRequests`);
+    const result = await response.json();
+
+    if (result.success) {
+      purchaseRequests = result.purchaseRequests;
+      loadRequests();
+      setupFilters();
+      updateStats();
+    } else {
+      console.error("Failed to fetch purchase requests:", result.message);
+      // Optionally display an error message to the user
+      showAlert("Failed to load requests. Please try again.", "danger");
+    }
+  } catch (error) {
+    console.error("Error initializing requests page:", error);
+    showAlert("Network error. Could not load requests.", "danger");
+  }
+}
 
 function setupFilters() {
   document.querySelectorAll(".filter-btn").forEach((btn) => {
@@ -79,6 +43,8 @@ function setupFilters() {
 
 function loadRequests() {
   const tbody = document.getElementById("requestsTableBody");
+  if (!tbody) return;
+
   const filtered =
     currentFilter === "all"
       ? purchaseRequests
@@ -298,59 +264,57 @@ function showConfirmModal(action, requestId) {
   modal.classList.add("show");
 }
 
-function approveRequest(requestId) {
-  // TODO: Send to PHP via AJAX
-  /*
-            fetch('approve_request.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({request_id: requestId})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.success) {
-                    showAlert('Request approved successfully!', 'success');
-                    loadRequests();
-                    updateStats();
-                }
-            });
-            */
+async function approveRequest(requestId) {
+  try {
+    const response = await fetch(`${API_URL}?action=approveRequest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request_id: requestId }),
+    });
+    const result = await response.json();
 
-  // Mock approval
-  const request = purchaseRequests.find((r) => r.request_id === requestId);
-  if (request) {
-    request.status = "approved";
-    loadRequests();
-    updateStats();
-    showAlert("Request #" + requestId + " approved successfully!", "success");
+    if (result.success) {
+      showAlert("Request #" + requestId + " approved successfully!", "success");
+      // Update the local purchaseRequests array and re-render
+      const index = purchaseRequests.findIndex(r => r.request_id === requestId);
+      if (index !== -1) {
+          purchaseRequests[index].status = 'approved';
+      }
+      loadRequests();
+      updateStats();
+    } else {
+      showAlert("Failed to approve request: " + result.message, "danger");
+    }
+  } catch (error) {
+    console.error("Error approving request:", error);
+    showAlert("Network error. Could not approve request.", "danger");
   }
 }
 
-function markReceived(requestId) {
-  // TODO: Send to PHP via AJAX - this should also update stock and progress table
-  /*
-            fetch('mark_received.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({request_id: requestId})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.success) {
-                    showAlert('Request marked as received! Stock updated.', 'success');
-                    loadRequests();
-                    updateStats();
-                }
-            });
-            */
+async function markReceived(requestId) {
+  try {
+    const response = await fetch(`${API_URL}?action=markReceived`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request_id: requestId }),
+    });
+    const result = await response.json();
 
-  // Mock received
-  const request = purchaseRequests.find((r) => r.request_id === requestId);
-  if (request) {
-    request.status = "received";
-    loadRequests();
-    updateStats();
-    showAlert("Request #" + requestId + " marked as received!", "success");
+    if (result.success) {
+      showAlert("Request #" + requestId + " marked as received!", "success");
+       // Update the local purchaseRequests array and re-render
+       const index = purchaseRequests.findIndex(r => r.request_id === requestId);
+       if (index !== -1) {
+           purchaseRequests[index].status = 'received';
+       }
+      loadRequests();
+      updateStats();
+    } else {
+      showAlert("Failed to mark request as received: " + result.message, "danger");
+    }
+  } catch (error) {
+    console.error("Error marking request as received:", error);
+    showAlert("Network error. Could not mark request as received.", "danger");
   }
 }
 
@@ -370,6 +334,7 @@ function updateStats() {
 
 function showAlert(message, type) {
   const alert = document.getElementById("alert");
+  if (!alert) return;
   alert.textContent = message;
   alert.className = `alert alert-${type} show`;
 
@@ -379,13 +344,13 @@ function showAlert(message, type) {
 }
 
 // Close modals when clicking outside
-document.getElementById("detailsModal").addEventListener("click", function (e) {
+document.getElementById("detailsModal")?.addEventListener("click", function (e) {
   if (e.target === this) {
     closeModal("detailsModal");
   }
 });
 
-document.getElementById("confirmModal").addEventListener("click", function (e) {
+document.getElementById("confirmModal")?.addEventListener("click", function (e) {
   if (e.target === this) {
     closeModal("confirmModal");
   }
