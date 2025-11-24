@@ -189,6 +189,24 @@ if (!isset($_SESSION['user_id'])) {
         </div>
     </div>
 
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">Purchase Order Receipt</h2>
+          <button id="closeModal" class="close-modal-btn">×</button>
+        </div>
+        <div class="modal-body" id="receiptDetails">
+          <!-- Receipt content will be injected by JS -->
+        </div>
+        <div class="modal-footer">
+          <button id="printReceiptBtn" class="btn btn-primary">
+            <i class="fas fa-print"></i> Print
+          </button>
+        </div>
+      </div>
+    </div>
+
    <script src="../js/sidebar.js"></script>
    <script src="../js/purchase.js?v=<?php echo time(); ?>"></script>
 </body>

@@ -1,11 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Main components
-    const tableBody = document.getElementById('requestsTableBody');
+    const deliveryGrid = document.getElementById('deliveryGrid');
     const searchInput = document.getElementById('searchInput');
 
     // Modal components
     const modal = document.getElementById('receiveModal');
-    const modalTitle = document.getElementById('modalRequestId');
+    const modalRequestId = document.getElementById('modalRequestId');
     const modalItemsContainer = document.getElementById('modalItemsContainer');
     const receiveSubmitBtn = document.getElementById('receiveSubmitBtn');
     const closeBtns = document.querySelectorAll('.close-btn');
@@ -13,139 +13,207 @@ document.addEventListener('DOMContentLoaded', () => {
     let allRequests = [];
     let currentRequestId = null;
 
-    // --- Initial Load ---
     async function loadRequests() {
         try {
             const response = await fetch('delivery.php?api=1&fetch=requests');
-            const result = await response.json();
+            const responseText = await response.text();
 
-            if (!result.success) {
-                throw new Error(result.message);
+            // Log the raw response for debugging
+            console.log('Raw response:', responseText.substring(0, 200) + '...');
+
+            // Check if response is HTML (which would indicate an error)
+            if (responseText.trim().startsWith('<!DOCTYPE') || responseText.includes('</html>')) {
+                const errorMatch = responseText.match(/<title>([^<]+)<\/title>/i);
+                const errorMessage = errorMatch ? errorMatch[1] : 'Server returned an HTML error page';
+                throw new Error(`Server Error: ${errorMessage}`);
             }
 
-            allRequests = result.data;
-            renderTable();
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (e) {
+                console.error('Failed to parse JSON:', e);
+                console.error('Response was:', responseText);
+                throw new Error('Invalid response from server. Please try again.');
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} - ${result.message || 'Unknown error'}`);
+            }
+
+            if (!result.success) {
+                throw new Error(result.message || 'Request failed');
+            }
+
+            allRequests = result.data || [];
+            renderCards();
+
         } catch (error) {
             console.error('Error loading requests:', error);
-            Swal.fire('Error', 'Could not load purchase requests: ' + error.message, 'error');
+            const errorHtml = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                    <h3>Error Loading Requests</h3>
+                    <p>${error.message}</p>
+                    <p>Status: ${error.status || 'N/A'}</p>
+                    <div class="mt-3">
+                        <button class="btn btn-secondary" onclick="window.location.reload()">
+                            <i class="fas fa-sync-alt"></i> Try Again
+                        </button>
+                        <a href="../index.php" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> Login Page
+                        </a>
+                    </div>
+                </div>`;
+
+            deliveryGrid.innerHTML = errorHtml;
+
+            // If it's a session issue, redirect to login
+            if (error.message.includes('session') || error.message.includes('login') || error.message.includes('401')) {
+                setTimeout(() => {
+                    window.location.href = '../index.php';
+                }, 3000);
+            }
         }
     }
 
-    // --- Rendering ---
-    function renderTable(filter = '') {
+    function getStatusBadge(status) {
+        const statusMap = {
+            'pending': { class: 'pending', text: 'Pending' },
+            'approved': { class: 'approved', text: 'Approved' },
+            'received': { class: 'received', text: 'Received' }
+        };
+        const statusInfo = statusMap[status] || { class: 'secondary', text: status };
+        return `<span class="status-badge ${statusInfo.class}">${statusInfo.text}</span>`;
+    }
+
+    function renderCards(filter = '') {
         const lowerFilter = filter.toLowerCase();
         const filteredRequests = allRequests.filter(req =>
             req.request_id.toString().includes(lowerFilter) ||
-            req.supplier_name.toLowerCase().includes(lowerFilter)
+            req.supplier_name.toLowerCase().includes(lowerFilter) ||
+            req.status.toLowerCase().includes(lowerFilter)
         );
 
         if (filteredRequests.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No approved requests found.</td></tr>`;
+            deliveryGrid.innerHTML = '<div class="empty-state"><i class="fas fa-box-open fa-3x"></i><p>No deliveries match your search.</p></div>';
             return;
         }
 
-        tableBody.innerHTML = filteredRequests.map(req => `
-            <tr data-id="${req.request_id}">
-                <td>#${req.request_id}</td>
-                <td>${req.supplier_name}</td>
-                <td>${req.requested_by}</td>
-                <td>${new Date(req.request_date).toLocaleDateString()}</td>
-                <td><span class="status status-${req.status}">${req.status}</span></td>
-                <td>
-                    <button class="btn btn-primary btn-sm view-btn">
-                        <i class="fas fa-eye"></i> View & Receive
+        deliveryGrid.innerHTML = filteredRequests.map(req => `
+            <div class="delivery-card status-${req.status}" data-id="${req.request_id}">
+                <div class="card-header">
+                    <h3><span class="request-id">#${req.request_id}</span></h3>
+                    ${getStatusBadge(req.status)}
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <span class="label">Supplier</span>
+                        <span class="value">${req.supplier_name}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Request Date</span>
+                        <span class="value">${new Date(req.request_date).toLocaleDateString()}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Items</span>
+                        <span class="value">${req.item_count || 0} types</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Total Qty</span>
+                        <span class="value">${parseFloat(req.total_qty || 0).toFixed(2)}</span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary view-btn" ${req.status === 'received' ? 'disabled' : ''}>
+                        <i class="fas ${req.status === 'received' ? 'fa-check-circle' : 'fa-dolly-flatbed'}"></i> 
+                        ${req.status === 'received' ? 'Received' : 'View & Receive'}
                     </button>
-                </td>
-            </tr>
+                </div>
+            </div>
         `).join('');
     }
 
-    // --- Modal Handling ---
     function openModal(requestId) {
         currentRequestId = requestId;
-        modalTitle.textContent = requestId;
+        modalRequestId.textContent = requestId;
         modal.style.display = 'flex';
         loadModalItems(requestId);
     }
 
     function closeModal() {
         modal.style.display = 'none';
-        modalItemsContainer.innerHTML = '<div class="loader"></div>'; // Reset for next time
+        modalItemsContainer.innerHTML = '<div class="loader"></div>';
         currentRequestId = null;
     }
 
     async function loadModalItems(requestId) {
         try {
             const response = await fetch(`delivery.php?api=1&fetch=items&request_id=${requestId}`);
-            const result = await response.json();
+            const responseText = await response.text();
 
-            if (!result.success) throw new Error(result.message);
+            // Check if response is HTML (which would indicate an error)
+            if (responseText.trim().startsWith('<!DOCTYPE') || responseText.includes('</html>')) {
+                throw new Error('Session expired. Please refresh the page and try again.');
+            }
 
-            modalItemsContainer.innerHTML = result.data.map(item => `
-                <div class="modal-item" data-item-id="${item.item_id}">
-                    <div class="item-name">${item.item_name}</div>
-                    <div class="item-qty-req">Requested: ${item.qty_requested}</div>
-                    <div class="item-inputs">
-                        <div class="form-group">
-                            <label>Quantity Received:</label>
-                            <input type="number" class="form-control qty-received" min="0" step="1" value="${item.qty_requested}">
-                        </div>
-                        <div class="form-group">
-                            <label>Price per Unit:</label>
-                            <input type="number" class="form-control price" min="0.01" step="0.01" placeholder="Enter cost...">
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            const result = JSON.parse(responseText);
+            if (!result.success) throw new Error(result.message || 'Failed to load items');
 
+            const request = allRequests.find(req => req.request_id == requestId);
+            const isReceived = request?.status === 'received';
+            receiveSubmitBtn.style.display = isReceived ? 'none' : 'block';
+
+            modalItemsContainer.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-right">Requested</th>
+                            <th class="text-right" width="120px">Received Qty</th>
+                            <th class="text-right" width="140px">Price/Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${result.data.map(item => `
+                            <tr class="modal-item" data-item-id="${item.item_id}">
+                                <td>${item.item_name}</td>
+                                <td class="text-right">${parseFloat(item.qty_requested).toFixed(2)}</td>
+                                <td>
+                                    <input type="number" class="form-control text-right qty-received" min="0" value="${parseFloat(item.qty_requested).toFixed(2)}" ${isReceived ? 'readonly' : ''}>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control text-right price" min="0.01" step="0.01" placeholder="0.00" ${isReceived ? 'readonly' : ''}>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
         } catch (error) {
             console.error('Error loading modal items:', error);
             modalItemsContainer.innerHTML = '<p class="text-danger">Could not load items.</p>';
         }
     }
 
-    // --- Event Listeners ---
-    searchInput.addEventListener('input', () => renderTable(searchInput.value));
-    
-    tableBody.addEventListener('click', e => {
-        const viewButton = e.target.closest('.view-btn');
-        if (viewButton) {
-            const row = viewButton.closest('tr');
-            const requestId = row.dataset.id;
-            openModal(requestId);
-        }
-    });
-
-    closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
-    window.addEventListener('click', e => {
-        if (e.target === modal) closeModal();
-    });
-
-    receiveSubmitBtn.addEventListener('click', handleReceiveSubmit);
-
-
-    // --- API Submission ---
     async function handleReceiveSubmit() {
         const itemsToReceive = [];
-        const itemElements = modalItemsContainer.querySelectorAll('.modal-item');
-
         let allPricesEntered = true;
-        itemElements.forEach(el => {
+
+        modalItemsContainer.querySelectorAll('.modal-item').forEach(el => {
             const qty_received = parseFloat(el.querySelector('.qty-received').value);
             const price = parseFloat(el.querySelector('.price').value);
 
             if (qty_received > 0) {
-                if (isNaN(price) || price <= 0) {
-                    allPricesEntered = false;
-                }
+                if (isNaN(price) || price <= 0) allPricesEntered = false;
                 itemsToReceive.push({
                     item_id: parseInt(el.dataset.itemId),
-                    qty_received: qty_received,
-                    price: price,
+                    qty_received,
+                    price,
                 });
             }
         });
-        
+
         if (!allPricesEntered) {
             Swal.fire('Missing Prices', 'Please enter a valid price for all items you are receiving.', 'warning');
             return;
@@ -158,43 +226,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
         Swal.fire({
             title: 'Are you sure?',
-            text: "This will update stock levels and cannot be easily undone.",
+            text: "This will update stock levels and cannot be undone.",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
             confirmButtonText: 'Yes, receive them!'
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const payload = {
-                        request_id: currentRequestId,
-                        items: itemsToReceive,
-                    };
-
                     const response = await fetch('delivery.php?api=1', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ request_id: currentRequestId, items: itemsToReceive })
                     });
-
                     const resData = await response.json();
-                    if (!resData.success) {
-                        throw new Error(resData.message);
-                    }
+                    if (!resData.success) throw new Error(resData.message);
 
                     Swal.fire('Success!', resData.message, 'success');
                     closeModal();
-                    loadRequests(); // Refresh the main table
-
+                    loadRequests();
                 } catch (error) {
-                    console.error('Submission Error:', error);
                     Swal.fire('Error', 'Failed to receive items: ' + error.message, 'error');
                 }
             }
         });
     }
 
-    // --- Initial Load ---
+    searchInput.addEventListener('input', () => renderCards(searchInput.value));
+    deliveryGrid.addEventListener('click', e => {
+        const card = e.target.closest('.delivery-card');
+        if (card) {
+            openModal(card.dataset.id);
+        }
+    });
+    closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
+    window.addEventListener('click', e => {
+        if (e.target === modal) closeModal();
+    });
+    receiveSubmitBtn.addEventListener('click', handleReceiveSubmit);
+
     loadRequests();
 });
+

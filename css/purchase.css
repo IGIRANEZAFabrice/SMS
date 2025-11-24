@@ -402,3 +402,232 @@ body {
     font-size: 22px;
   }
 }
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 2px solid var(--gray-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--blue-dark);
+}
+
+.close-modal-btn {
+    background: transparent;
+    border: none;
+    font-size: 2rem;
+    color: var(--gray-mid);
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+    background: var(--red-light);
+    color: var(--red);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+    background: var(--light-bg);
+    text-align: right;
+}
+
+.modal-footer .btn {
+    width: auto;
+    min-width: 120px;
+}
+
+/* Receipt Styles */
+.receipt-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-mid);
+}
+
+.receipt-header h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--blue);
+    margin-bottom: 0.5rem;
+}
+
+.receipt-info {
+    margin-bottom: 1.5rem;
+}
+
+.receipt-info p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    color: var(--gray-darker);
+}
+
+.receipt-info strong {
+    color: var(--blue-dark);
+    font-weight: 600;
+    min-width: 120px;
+    display: inline-block;
+}
+
+/* Receipt Table */
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+}
+
+.receipt-table thead {
+    background: var(--blue-light);
+}
+
+.receipt-table th {
+    padding: 0.8rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.receipt-table th.text-right {
+    text-align: right;
+}
+
+.receipt-table tbody tr {
+    border-bottom: 1px solid var(--gray-light);
+}
+
+.receipt-table td {
+    padding: 0.8rem;
+    font-size: 0.95rem;
+}
+
+.receipt-table td.text-right {
+    text-align: right;
+    font-weight: 600;
+}
+
+.receipt-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-mid);
+}
+
+.receipt-footer p {
+    color: var(--gray-dark);
+    font-size: 0.9rem;
+}
+
+
+/* Print Styles */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #receiptModal, #receiptModal * {
+        visibility: visible;
+    }
+
+    #receiptModal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto;
+        background: white;
+        backdrop-filter: none;
+    }
+    
+    .modal-content {
+        box-shadow: none;
+        max-width: 100%;
+        border-radius: 0;
+    }
+
+    .modal-header, .modal-footer, .close-modal-btn {
+        display: none !important;
+    }
+    
+    .modal-body {
+        padding: 20px;
+        overflow-y: visible;
+    }
+
+    .receipt-table th, .receipt-table td {
+        color: #000 !important;
+    }
+
+    @page {
+        size: auto;
+        margin: 0.5cm;
+    }
+}

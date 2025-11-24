@@ -50,9 +50,7 @@ CREATE TABLE tbl_item_stock (
     FOREIGN KEY (item_id) REFERENCES tbl_items(item_id)
 );
 
--- ================================
--- PURCHASE REQUEST
--- ================================
+
 CREATE TABLE purchase_request (
     request_id INT AUTO_INCREMENT PRIMARY KEY,
     supplier_id INT NOT NULL,

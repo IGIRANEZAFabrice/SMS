@@ -1,4 +1,11 @@
 <?php
+// Enable all error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../../php_errors.log');
+
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -6,11 +13,17 @@ require_once __DIR__ . '/../config/db.php';
 
 // --- API HANDLING ---
 if (isset($_GET['api'])) {
+    // Set JSON content type
     header('Content-Type: application/json');
-
+    
+    // Debug log
+    error_log("API Request: " . $_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI']);
+    
+    // Check session
     if (!isset($_SESSION['user_id'])) {
+        error_log("API Error: Unauthorized access - No user_id in session");
         http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized: Please login again']);
         exit;
     }
 
@@ -21,12 +34,22 @@ if (isset($_GET['api'])) {
             // Fetch approved purchase requests
             if ($_GET['fetch'] === 'requests') {
                 $stmt = $conn->prepare("
-                    SELECT pr.request_id, s.supplier_name, u.fullname as requested_by, pr.request_date, pr.status
+                    SELECT 
+                        pr.request_id, 
+                        s.supplier_name, 
+                        u.fullname as requested_by, 
+                        pr.request_date, 
+                        pr.status,
+                        COUNT(pri.item_id) as item_count,
+                        SUM(pri.qty_requested) as total_qty
                     FROM purchase_request pr
                     JOIN suppliers s ON pr.supplier_id = s.supplier_id
                     JOIN users u ON pr.created_by = u.user_id
-                    WHERE pr.status = 'approved'
-                    ORDER BY pr.request_date DESC
+                    LEFT JOIN purchase_request_items pri ON pr.request_id = pri.request_id
+                    GROUP BY pr.request_id
+                    ORDER BY 
+                        FIELD(pr.status, 'pending', 'approved', 'received') ASC,
+                        pr.request_date DESC
                 ");
                 $stmt->execute();
                 $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -59,6 +82,31 @@ if (isset($_GET['api'])) {
 
             $conn->begin_transaction();
 
+            // Prepare statements outside the loop for efficiency
+            $stmt_old = $conn->prepare("
+                SELECT s.qty as old_qty, i.price as old_price
+                FROM tbl_items i
+                LEFT JOIN tbl_item_stock s ON i.item_id = s.item_id
+                WHERE i.item_id = ? FOR UPDATE
+            ");
+            if (!$stmt_old) throw new Exception("Prepare failed (stmt_old): " . $conn->error);
+
+            $stmt_update_item = $conn->prepare("UPDATE tbl_items SET price = ? WHERE item_id = ?");
+            if (!$stmt_update_item) throw new Exception("Prepare failed (stmt_update_item): " . $conn->error);
+
+            $stmt_update_stock = $conn->prepare("
+                INSERT INTO tbl_item_stock (item_id, qty) VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE qty = qty + ?
+            ");
+            if (!$stmt_update_stock) throw new Exception("Prepare failed (stmt_update_stock): " . $conn->error);
+
+            $stmt_progress = $conn->prepare("
+                INSERT INTO tbl_progress (item_id, date, in_qty, last_qty, end_qty, new_price, avg_cost, remark, created_by)
+                VALUES (?, CURDATE(), ?, ?, ?, ?, ?, ?, ?)
+            ");
+            if (!$stmt_progress) throw new Exception("Prepare failed (stmt_progress): " . $conn->error);
+
+
             foreach ($items as $item) {
                 $item_id = (int)$item['item_id'];
                 $new_qty = (float)$item['qty_received'];
@@ -67,12 +115,6 @@ if (isset($_GET['api'])) {
                 if ($new_qty <= 0 || $new_price <= 0) continue; // Skip items not received
 
                 // 1. Get old quantity and old price
-                $stmt_old = $conn->prepare("
-                    SELECT s.qty as old_qty, i.price as old_price
-                    FROM tbl_items i
-                    LEFT JOIN tbl_item_stock s ON i.item_id = s.item_id
-                    WHERE i.item_id = ? FOR UPDATE
-                ");
                 $stmt_old->bind_param("i", $item_id);
                 $stmt_old->execute();
                 $res_old = $stmt_old->get_result()->fetch_assoc();
@@ -85,32 +127,24 @@ if (isset($_GET['api'])) {
                     ? (($old_qty * $old_price) + ($new_qty * $new_price)) / $total_qty
                     : $new_price;
 
-                // 3. Update item's main price (last received price) and average cost in tbl_items
-                $stmt_update_item = $conn->prepare("UPDATE tbl_items SET price = ? WHERE item_id = ?");
-                $stmt_update_item->bind_param("di", $new_price, $item_id);
+                // 3. Update item's main price to be the new average cost
+                $stmt_update_item->bind_param("di", $avg_cost, $item_id);
                 $stmt_update_item->execute();
 
                 // 4. Update stock quantity
-                $stmt_update_stock = $conn->prepare("
-                    INSERT INTO tbl_item_stock (item_id, qty) VALUES (?, ?)
-                    ON DUPLICATE KEY UPDATE qty = qty + ?
-                ");
-                $stmt_update_stock->bind_param("idi", $item_id, $new_qty, $new_qty);
+                $stmt_update_stock->bind_param("idd", $item_id, $new_qty, $new_qty);
                 $stmt_update_stock->execute();
                 
                 // 5. Record in tbl_progress
                 $end_qty = $old_qty + $new_qty;
                 $remark = "Received from PO #{$request_id}";
-                $stmt_progress = $conn->prepare("
-                    INSERT INTO tbl_progress (item_id, date, in_qty, last_qty, end_qty, new_price, remark, created_by)
-                    VALUES (?, CURDATE(), ?, ?, ?, ?, ?, ?)
-                ");
-                $stmt_progress->bind_param("iddddsi", $item_id, $new_qty, $old_qty, $end_qty, $avg_cost, $remark, $user_id);
+                $stmt_progress->bind_param("idddddsi", $item_id, $new_qty, $old_qty, $end_qty, $new_price, $avg_cost, $remark, $user_id);
                 $stmt_progress->execute();
             }
 
             // 6. Update purchase request status to 'received'
             $stmt_pr_status = $conn->prepare("UPDATE purchase_request SET status = 'received' WHERE request_id = ?");
+            if (!$stmt_pr_status) throw new Exception("Prepare failed (stmt_pr_status): " . $conn->error);
             $stmt_pr_status->bind_param("i", $request_id);
             $stmt_pr_status->execute();
             
@@ -119,10 +153,15 @@ if (isset($_GET['api'])) {
         }
 
     } catch (Exception $e) {
-        if ($conn->in_transaction) {
+        error_log("Error in API: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        
+        if ($conn && $conn->in_transaction) {
             $conn->rollback();
         }
+        
         http_response_code(500);
+        error_log("Sending 500 error response");
         echo json_encode(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()]);
     }
     exit;
@@ -156,28 +195,15 @@ if (!isset($_SESSION['user_id'])) {
                     <p class="page-subtitle">Review approved purchase requests and receive items into stock.</p>
                 </div>
 
-                <div class="table-container">
-                    <div class="toolbar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" placeholder="Search by request ID or supplier..." id="searchInput" />
-                        </div>
+                <div class="toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search by request ID, supplier, or status..." id="searchInput" />
                     </div>
-                    <table id="requestsTable">
-                        <thead>
-                            <tr>
-                                <th>Request ID</th>
-                                <th>Supplier</th>
-                                <th>Requested By</th>
-                                <th>Request Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="requestsTableBody">
-                            <!-- Data will be loaded here by JavaScript -->
-                        </tbody>
-                    </table>
+                </div>
+
+                <div class="delivery-grid" id="deliveryGrid">
+                    <!-- Delivery cards will be loaded here by JavaScript -->
                 </div>
             </div>
         </div>
@@ -196,8 +222,8 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary close-btn">Cancel</button>
-                <button id="receiveSubmitBtn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Receive Selected Items</button>
+                <button class="btn btn-outline-secondary close-btn">Cancel</button>
+                <button id="receiveSubmitBtn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Receive Items</button>
             </div>
         </div>
     </div>

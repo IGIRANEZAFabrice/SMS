@@ -40,6 +40,12 @@
         <i class="fas fa-file-import"></i>
         <span>Purchase Request</span>
       </a>
+      <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
+      <a class="submenu-item" href="index.php?resto=delivery">
+        <i class="fas fa-file-import"></i>
+        <span>Receive New Stock</span>
+      </a>
+      <?php } ?>
       <a class="submenu-item" href="index.php?resto=add">
         <i class="fas fa-plus-circle"></i>
         <span>Add Stock</span>

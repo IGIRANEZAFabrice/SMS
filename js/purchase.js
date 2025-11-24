@@ -12,6 +12,9 @@ function setupEventListeners() {
   document.getElementById("itemSearch").addEventListener("input", filterItems);
   document.getElementById("submitBtn").addEventListener("click", submitRequest);
   document.getElementById("clearBtn").addEventListener("click", clearAll);
+   // Modal listeners
+  document.getElementById('closeModal').addEventListener('click', closeReceiptModal);
+  document.getElementById('printReceiptBtn').addEventListener('click', printReceipt);
 }
 
 function setDefaultDate() {
@@ -166,9 +169,21 @@ function clearAll() {
     showAlert("All items cleared", "success");
   }
 }
-
+function resetForm() {
+    document.getElementById('supplierSelect').value = '';
+    document.getElementById('itemSearch').value = '';
+    selectedItems = [];
+    updateSelectedItemsUI();
+    renderItemsList();
+    setDefaultDate();
+}
 async function submitRequest() {
-  const supplierId = document.getElementById("supplierSelect").value;
+  const supplierSelect = document.getElementById("supplierSelect");
+  const supplierId = supplierSelect.value;
+  let supplierName = '';
+  if (supplierSelect.selectedIndex > -1) {
+      supplierName = supplierSelect.options[supplierSelect.selectedIndex].text;
+  }
   const requestDate = document.getElementById("requestDate").value;
   const submitBtn = document.getElementById("submitBtn");
 
@@ -198,16 +213,14 @@ async function submitRequest() {
     if (!result.success) {
       throw new Error(result.message);
     }
-
     showAlert(`Request #${result.request_id} created successfully!`, 'success');
-    
-    // Reset form
-    document.getElementById('supplierSelect').value = '';
-    document.getElementById('itemSearch').value = '';
-    selectedItems = [];
-    updateSelectedItemsUI();
-    renderItemsList();
-    setDefaultDate();
+     // Show receipt
+    showReceiptModal({
+        requestId: result.request_id,
+        supplierName: supplierName,
+        requestDate: requestDate,
+        items: selectedItems
+    });
 
   } catch (error) {
     showAlert(error.message || 'An unknown error occurred during submission.', 'error');
@@ -216,6 +229,55 @@ async function submitRequest() {
     submitBtn.disabled = false;
     submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Request';
   }
+}
+
+function showReceiptModal(data) {
+    const receiptDetails = document.getElementById('receiptDetails');
+    const modal = document.getElementById('receiptModal');
+
+    const itemsHtml = data.items.map(item => `
+        <tr>
+            <td>${item.name}</td>
+            <td class="text-right">${item.qty_requested}</td>
+        </tr>
+    `).join('');
+
+    receiptDetails.innerHTML = `
+        <div class="receipt-header">
+            <h3>Purchase Order</h3>
+        </div>
+        <div class="receipt-info">
+            <p><strong>Request ID:</strong> #${data.requestId}</p>
+            <p><strong>Supplier:</strong> ${data.supplierName}</p>
+            <p><strong>Date:</strong> ${new Date(data.requestDate).toLocaleDateString()}</p>
+        </div>
+        <table class="receipt-table">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th class="text-right">Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemsHtml}
+            </tbody>
+        </table>
+        <div class="receipt-footer">
+            <p>Thank you for your business!</p>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function closeReceiptModal() {
+    const modal = document.getElementById('receiptModal');
+    modal.style.display = 'none';
+    resetForm(); // Reset the main form after closing the modal
+}
+
+function printReceipt() {
+    window.print();
 }
 
 function showAlert(message, type) {
