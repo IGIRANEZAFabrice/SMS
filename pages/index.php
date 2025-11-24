@@ -20,6 +20,10 @@ switch ($view) {
         $title = 'Point of Sale';
         $page = 'sell.php';
         break;
+    case 'sellingprice':
+        $title = 'selling price';
+        $page = 'minprice.php';
+        break;
 
     case 'supplier':
         $title = 'Manage Suppliers';

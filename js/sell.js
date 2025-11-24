@@ -56,7 +56,8 @@ function renderItemGrid(filter = "") {
   grid.innerHTML = filteredItems.map(item => `
     <div class="item-card" onclick="addToCart(${item.item_id})">
       <div class="item-name">${item.name}</div>
-      <div class="item-price">$${parseFloat(item.price).toFixed(2)}</div>
+      <div class="item-price">$${parseFloat(item.min_price).toFixed(2)}</div>
+     
       <div class="item-stock ${item.stock < 5 ? 'stock-low' : ''}">
         Stock: ${item.stock}
       </div>
@@ -74,6 +75,9 @@ function addToCart(itemId) {
 
   const cartItem = cart.find(ci => ci.item_id === itemId);
 
+  // Determine initial price: use item.price if available, else item.min_price
+  const initialSellingPrice = parseFloat(item.min_price);
+
   if (cartItem) {
     if (cartItem.qty < item.stock) {
       cartItem.qty++;
@@ -82,7 +86,7 @@ function addToCart(itemId) {
     }
   } else {
     if (item.stock > 0) {
-      cart.push({ ...item, qty: 1 });
+      cart.push({ ...item, qty: 1, price: initialSellingPrice }); // Add item with initial selling price
     } else {
       showAlert("Item is out of stock.", "warning");
     }
@@ -107,13 +111,19 @@ function renderCart() {
           <span class="cart-item-name">${item.name}</span>
           <button class="remove-btn" onclick="removeFromCart(${index})">×</button>
         </div>
-        <div class="cart-item-controls">
+        <div class="cart-item-details">
           <div class="qty-control">
             <button class="qty-btn" onclick="updateQty(${index}, -1)">−</button>
             <input type="number" class="qty-input" value="${item.qty}" 
                    onchange="setQty(${index}, this.value)" 
                    min="1" max="${item.stock}">
             <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
+          </div>
+          <div class="price-info">
+            <span class="min-price-display">Min: $${parseFloat(item.min_price).toFixed(2)}</span>
+            <input type="number" class="selling-price-input" value="${parseFloat(item.min_price).toFixed(2)}"
+                   step="0.01" min="${parseFloat(item.min_price).toFixed(2)}"
+                   onchange="updateSellingPrice(${index}, this.value)">
           </div>
           <span class="item-total">$${(item.price * item.qty).toFixed(2)}</span>
         </div>
@@ -123,6 +133,29 @@ function renderCart() {
   
   cartCount.textContent = cart.reduce((sum, item) => sum + item.qty, 0);
   updateTotals();
+}
+
+// New function to update selling price from cart input
+function updateSellingPrice(index, value) {
+  const item = cart[index];
+  let newPrice = parseFloat(value);
+
+  if (isNaN(newPrice) || newPrice <= 0) {
+    showAlert("Please enter a valid selling price.", "warning");
+    renderCart(); // Re-render to revert to last valid price
+    return;
+  }
+
+  // Get original item details to access min_price
+  const originalItem = items.find(i => i.item_id === item.item_id);
+  if (newPrice < originalItem.min_price) {
+    showAlert(`Selling price for ${item.name} cannot be less than its minimum price ($${parseFloat(originalItem.min_price).toFixed(2)}).`, "warning");
+    renderCart(); // Re-render to revert to last valid price
+    return;
+  }
+
+  item.price = newPrice;
+  renderCart(); // Re-render to update totals and display
 }
 
 function updateQty(index, change) {
@@ -206,7 +239,7 @@ async function handleCheckout() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         discount,
-        items: cart.map(item => ({ item_id: item.item_id, qty: item.qty })),
+        items: cart.map(item => ({ item_id: item.item_id, qty: item.qty, price: item.price })),
       }),
     });
 

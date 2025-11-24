@@ -1,4 +1,3 @@
-
 CREATE TABLE roles (
     role_id INT AUTO_INCREMENT PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL
@@ -34,35 +33,10 @@ CREATE TABLE suppliers (
 -- ================================
 -- CATEGORIES
 -- ================================
-CREATE TABLE tbl_categories (
-    cat_id INT AUTO_INCREMENT PRIMARY KEY,
-    cat_name VARCHAR(100) NOT NULL,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
 
 -- ================================
 -- ITEMS
 -- ================================
-CREATE TABLE tbl_items (
-    item_id INT AUTO_INCREMENT PRIMARY KEY,
-    item_name VARCHAR(100) NOT NULL,
-    item_unit VARCHAR(20),
-    item_status INT NOT NULL DEFAULT 1,
-    price DOUBLE DEFAULT NULL,
-
-    cat_id INT,
-    supplier_id INT,
-    created_by INT,
-
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (cat_id) REFERENCES tbl_categories(cat_id),
-    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
-    FOREIGN KEY (created_by) REFERENCES users(user_id)
-);
 
 -- ================================
 -- STOCK (LIVE QUANTITY ONLY)
@@ -189,8 +163,30 @@ CREATE TABLE receipt_items (
 
 
 
+CREATE TABLE tbl_categories (
+    cat_id INT AUTO_INCREMENT PRIMARY KEY,
+    cat_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
 
+CREATE TABLE tbl_items (
+    item_id INT AUTO_INCREMENT PRIMARY KEY,
+    item_name VARCHAR(100) NOT NULL,
+    item_unit VARCHAR(20),
+    item_status INT NOT NULL DEFAULT 1,
+    price DOUBLE DEFAULT NULL,
+    cat_id INT,
+    supplier_id INT,
+    created_by INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (cat_id) REFERENCES tbl_categories(cat_id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
 
 
 CREATE TABLE tbl_units (
@@ -208,4 +204,14 @@ ALTER TABLE tbl_items
 
 
 
- 
+ ALTER TABLE tbl_items
+ADD COLUMN min_price DOUBLE DEFAULT 0 AFTER price;
+ CREATE TABLE `damaged` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `item_id` int NOT NULL,
+  `qty` float NOT NULL,
+  `message` varchar(200) NOT NULL,
+  `created_at` date NOT NULL,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;

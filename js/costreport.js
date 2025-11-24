@@ -199,6 +199,8 @@ function loadItemTable() {
         const grossProfit = i.totalRevenue - i.totalCOGS;
         const avgSalePrice = i.totalRevenue / i.qty;
         const avgCostPrice = i.totalCOGS / i.qty;
+        const unitProfitLoss = avgSalePrice - avgCostPrice; // Calculate Unit P/L
+        const totalProfitLoss = grossProfit; // Total P/L is simply Gross Profit
         const margin = i.totalRevenue > 0 ? (grossProfit / i.totalRevenue) * 100 : 0;
 
         tbody.innerHTML += `
@@ -208,6 +210,8 @@ function loadItemTable() {
               <td class="text-right"><strong>${i.qty}</strong></td>
               <td class="text-right">${formatCurrency(avgSalePrice)}</td>
               <td class="text-right">${formatCurrency(avgCostPrice)}</td>
+              <td class="text-right" style="color: ${unitProfitLoss > 0 ? 'var(--green)' : 'var(--red)'}">${formatCurrency(unitProfitLoss)}</td>
+              <td class="text-right" style="color: ${totalProfitLoss > 0 ? 'var(--green)' : 'var(--red)'}">${formatCurrency(totalProfitLoss)}</td>
               <td class="text-right"><strong>${formatCurrency(i.totalRevenue)}</strong></td>
               <td class="text-right">${formatCurrency(i.totalCOGS)}</td>
               <td class="text-right" style="color: ${grossProfit > 0 ? 'var(--green)' : 'var(--red)'}"><strong>${formatCurrency(grossProfit)}</strong></td>

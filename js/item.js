@@ -253,10 +253,11 @@ async function addItemForm(e) {
   const supplierId = document.getElementById("itemSupplier").value;
   const unitId = document.getElementById("itemUnit").value;
   const price = document.getElementById("itemPrice").value;
+  const minPrice = document.getElementById("itemMinPrice").value;
   const itemStatus = document.getElementById("itemStatus").value;
 
   // Basic validation
-  if (!itemName || !catId || !supplierId || !unitId || !price) {
+  if (!itemName || !catId || !supplierId || !unitId || !price || !minPrice) {
     showAlert("error", "Error", "Please fill in all required fields");
     return;
   }
@@ -265,6 +266,13 @@ async function addItemForm(e) {
   const priceValue = parseFloat(price);
   if (isNaN(priceValue) || priceValue <= 0) {
     showAlert("error", "Error", "Please enter a valid price");
+    return;
+  }
+  
+  // Convert minPrice to number and validate
+  const minPriceValue = parseFloat(minPrice);
+  if (isNaN(minPriceValue) || minPriceValue <= 0) {
+    showAlert("error", "Error", "Please enter a valid minimum price");
     return;
   }
 
@@ -290,6 +298,7 @@ async function addItemForm(e) {
       supplier_id: supplierId,
       unit_id: unitId,
       price: priceValue,
+      min_price: minPriceValue,
       item_status: itemStatus || 1,
     };
 

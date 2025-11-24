@@ -20,6 +20,12 @@
         <span class="menu-item-text">Sell</span>
       </div>
     </a>
+    <a class="menu-item" href="index.php?resto=sellingprice">
+      <div class="menu-item-content">
+        <i class="fas fa-tags"></i>
+        <span class="menu-item-text">Selling Price</span>
+      </div>
+    </a>
     <div class="menu-item" data-dropdown="true" data-page="stock">
       <div class="menu-item-content">
         <i class="fas fa-box"></i>
@@ -75,6 +81,14 @@
       <div class="menu-item-content">
         <i class="fas fa-cog"></i>
         <span class="menu-item-text"> Users</span>
+      </div>
+    </a>
+    <?php } ?>
+    <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
+    <a class="menu-item" href="index.php?resto=minprice">
+      <div class="menu-item-content">
+        <i class="fas fa-money-bill-wave"></i>
+        <span class="menu-item-text"> Minimum Prices</span>
       </div>
     </a>
     <?php } ?>

@@ -32,14 +32,15 @@ try {
     foreach ($items as $item) {
         $item_id = (int)$item['item_id'];
         $qty = (float)$item['qty'];
+        $selling_price = (float)$item['price']; // Get the selling price from the frontend
 
         if ($qty <= 0) {
             throw new Exception('Invalid quantity for item ' . $item_id);
         }
 
-        // Lock the row, get stock, and get item details
+        // Lock the row, get stock, item name, original price, AND min_price
         $stmt = $conn->prepare(
-            'SELECT s.qty as stock, i.item_name as name, i.price 
+            'SELECT s.qty as stock, i.item_name as name, i.price as original_price, i.min_price
              FROM tbl_item_stock s
              JOIN tbl_items i ON s.item_id = i.item_id
              WHERE s.item_id = ? FOR UPDATE'
@@ -55,6 +56,12 @@ try {
         }
 
         $current_stock = (float)$item_data['stock'];
+        $item_min_price = (float)$item_data['min_price'];
+
+        // Server-side validation for min_price
+        if ($selling_price < $item_min_price) {
+            throw new Exception('Selling price for ' . $item_data['name'] . ' ($' . number_format($selling_price, 2) . ') cannot be less than its minimum price ($' . number_format($item_min_price, 2) . ').');
+        }
 
         if ($current_stock < $qty) {
             throw new Exception('Not enough stock for ' . $item_data['name'] . '. Available: ' . $current_stock . ', Requested: ' . $qty);
@@ -68,20 +75,30 @@ try {
         $stmt->execute();
         $stmt->close();
 
+        // Get the last new_price for the item (for tbl_progress)
+        $price_stmt = $conn->prepare('SELECT new_price FROM tbl_progress WHERE item_id = ? AND new_price IS NOT NULL ORDER BY prog_id DESC LIMIT 1');
+        $price_stmt->bind_param('i', $item_id);
+        $price_stmt->execute();
+        $price_res = $price_stmt->get_result();
+        $last_price_data = $price_res->fetch_assoc();
+        $price_stmt->close();
+        
+        $new_price = $last_price_data ? (float)$last_price_data['new_price'] : null;
+
         // Record progress
-        $stmt = $conn->prepare('INSERT INTO tbl_progress (item_id, date, out_qty, last_qty, end_qty, created_by) VALUES (?, CURDATE(), ?, ?, ?, ?)');
-        $stmt->bind_param('iddii', $item_id, $qty, $current_stock, $new_stock, $user_id);
+        $stmt = $conn->prepare('INSERT INTO tbl_progress (item_id, date, out_qty, last_qty, end_qty, new_price, created_by) VALUES (?, CURDATE(), ?, ?, ?, ?, ?)');
+        $stmt->bind_param('iddidi', $item_id, $qty, $current_stock, $new_stock, $new_price, $user_id);
         $stmt->execute();
         $stmt->close();
         
-        $item_total = $item_data['price'] * $qty;
+        $item_total = $selling_price * $qty; // Calculate total using the custom selling price
         $subtotal += $item_total;
 
         $receipt_items[] = [
             'item_id' => $item_id,
             'name' => $item_data['name'],
             'qty' => $qty,
-            'price' => (float)$item_data['price'],
+            'price' => $selling_price, // Use the custom selling price
             'total' => $item_total,
         ];
     }

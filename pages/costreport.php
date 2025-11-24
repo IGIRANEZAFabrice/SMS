@@ -25,7 +25,9 @@ if ($is_api === 'cogs-report') {
         SELECT
             ri.qty,
             ri.price as sale_price,
-            i.price as cost_price, -- This assumes tbl_items.price is the cost.
+            i.price as cost_price,
+            (ri.price - i.price) as unit_profit_loss,
+            (ri.price - i.price) * ri.qty as total_profit_loss,
             r.receipt_code,
             r.created_at as sale_date,
             u.fullname as created_by,
@@ -159,7 +161,7 @@ if (!isset($_SESSION['user_id'])) {
                             <button class="tab-btn" onclick="switchTab(event, 'by-category')"><i class="fas fa-tags"></i> By Category</button>
                         </div>
                         <div class="tab-content active" id="by-receiptTab"><div class="table-container"><table><thead><tr><th>Receipt Code</th><th>Date</th><th>Items Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Created By</th></tr></thead><tbody id="receiptTableBody"></tbody></table></div></div>
-                        <div class="tab-content" id="by-itemTab"><div class="table-container"><table><thead><tr><th>Item Name</th><th>Category</th><th class="text-right">Qty Sold</th><th class="text-right">Avg Sale Price</th><th class="text-right">Avg Cost Price</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th>Margin</th></tr></thead><tbody id="itemTableBody"></tbody></table></div></div>
+                        <div class="tab-content" id="by-itemTab"><div class="table-container"><table><thead><tr><th>Item Name</th><th>Category</th><th class="text-right">Qty Sold</th><th class="text-right">Avg Sale Price</th><th class="text-right">Avg Cost Price</th><th class="text-right">Unit P/L</th><th class="text-right">Total P/L</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th>Margin</th></tr></thead><tbody id="itemTableBody"></tbody></table></div></div>
                         <div class="tab-content" id="by-categoryTab"><div class="table-container"><table><thead><tr><th>Category</th><th class="text-right">Items Sold</th><th class="text-right">Qty Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Performance</th></tr></thead><tbody id="categoryTableBody"></tbody></table></div></div>
                     </div>
                 </div>

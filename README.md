@@ -1,1 +1,1 @@
-Stock Managemant System
+make a simple docunStock Managemant System

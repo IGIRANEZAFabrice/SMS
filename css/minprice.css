@@ -1,0 +1,167 @@
+/* minprice.css */
+
+/* General container styling */
+.container {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Card styling */
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    overflow: hidden; /* Ensures table overflow is handled */
+}
+
+.card-header {
+    background-color: #007bff;
+    color: #fff;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+/* Toolbar and search */
+.toolbar {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-box i {
+    position: absolute;
+    left: 10px;
+    color: #aaa;
+}
+
+.search-box input {
+    padding: 8px 10px 8px 35px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    width: 250px;
+    transition: border-color 0.3s;
+}
+
+.search-box input:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+/* Table styling */
+.table-container {
+    overflow-x: auto; /* Make table scrollable on small screens */
+    padding: 0 20px 20px 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+table th,
+table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+table thead th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #333;
+}
+
+table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Form controls within table */
+table .form-control {
+    width: 100px; /* Adjust as needed */
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Buttons */
+.btn {
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+/* Page Header */
+.page-header {
+    background-color: #fff;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: #333;
+}
+
+.page-header h1 i {
+    color: #007bff;
+    margin-right: 10px;
+}
+
+.page-header p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}

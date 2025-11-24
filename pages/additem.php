@@ -56,14 +56,14 @@ if ($is_api !== '') {
         http_response_code(400); echo json_encode(['success' => false]); exit;
     } elseif ($is_api === 'items') {
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $sql = 'SELECT i.item_id,i.item_name,i.cat_id,i.supplier_id,i.unit_id,u.unit_name,i.price,i.item_status,c.cat_name,s.supplier_name 
+            $sql = 'SELECT i.item_id,i.item_name,i.cat_id,i.supplier_id,i.unit_id,u.unit_name,i.price,i.min_price,i.item_status,c.cat_name,s.supplier_name 
                     FROM tbl_items i 
                     LEFT JOIN tbl_categories c ON c.cat_id=i.cat_id 
                     LEFT JOIN suppliers s ON s.supplier_id=i.supplier_id 
                     LEFT JOIN tbl_units u ON u.unit_id = i.unit_id 
                     ORDER BY i.item_id DESC';
             $res = $conn->query($sql); $out = [];
-            if ($res) { while ($row = $res->fetch_assoc()) { $out[] = [ 'item_id' => (int)$row['item_id'], 'item_name' => (string)$row['item_name'], 'cat_id' => (int)$row['cat_id'], 'cat_name' => (string)($row['cat_name'] ?? ''), 'supplier_id' => (int)$row['supplier_id'], 'supplier_name' => (string)($row['supplier_name'] ?? ''), 'unit_id' => (int)$row['unit_id'], 'unit_name' => (string)($row['unit_name'] ?? ''), 'price' => (float)$row['price'], 'item_status' => (int)$row['item_status'] ]; } }
+            if ($res) { while ($row = $res->fetch_assoc()) { $out[] = [ 'item_id' => (int)$row['item_id'], 'item_name' => (string)$row['item_name'], 'cat_id' => (int)$row['cat_id'], 'cat_name' => (string)($row['cat_name'] ?? ''), 'supplier_id' => (int)$row['supplier_id'], 'supplier_name' => (string)($row['supplier_name'] ?? ''), 'unit_id' => (int)$row['unit_id'], 'unit_name' => (string)($row['unit_name'] ?? ''), 'price' => (float)$row['price'], 'min_price' => (float)$row['min_price'], 'item_status' => (int)$row['item_status'] ]; } }
             echo json_encode(['success' => true, 'data' => $out]); exit;
         }
         $input = json_decode(file_get_contents('php://input'), true); if (!is_array($input)) { $input = $_POST; }
@@ -74,8 +74,9 @@ if ($is_api !== '') {
             $supplier_id = isset($input['supplier_id']) ? (int)$input['supplier_id'] : 0;
             $unit_id = isset($input['unit_id']) ? (int)$input['unit_id'] : 0;
             $price = isset($input['price']) ? (float)$input['price'] : 0;
+            $min_price = isset($input['min_price']) ? (float)$input['min_price'] : 0;
             $status = isset($input['item_status']) ? (int)$input['item_status'] : 1;
-            if ($name === '' || !$cat_id || !$supplier_id || !$unit_id || $price <= 0) { 
+            if ($name === '' || !$cat_id || !$supplier_id || !$unit_id || $price <= 0 || $min_price <= 0) { 
                 http_response_code(400); 
                 echo json_encode(['success' => false, 'message' => 'All fields are required']); 
                 exit; 
@@ -94,14 +95,14 @@ if ($is_api !== '') {
                 exit;
             }
             
-            $stmt = $conn->prepare('INSERT INTO tbl_items(item_name, unit_id, item_status, price, cat_id, supplier_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $stmt = $conn->prepare('INSERT INTO tbl_items(item_name, unit_id, item_status, price, min_price, cat_id, supplier_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
             if (!$stmt) { 
                 http_response_code(500); 
                 echo json_encode(['success' => false, 'message' => 'Database error']); 
                 exit; 
             }
             $created_by = (int)$_SESSION['user_id'];
-            $stmt->bind_param('siidiii', $name, $unit_id, $status, $price, $cat_id, $supplier_id, $created_by);
+            $stmt->bind_param('siiddiii', $name, $unit_id, $status, $price, $min_price, $cat_id, $supplier_id, $created_by);
             $ok = $stmt->execute();
             $id = $stmt->insert_id; $stmt->close();
             echo json_encode(['success' => (bool)$ok, 'item_id' => (int)$id]); exit;
@@ -541,6 +542,17 @@ if (!isset($_SESSION['role_id']) || (int)$_SESSION['role_id'] !== ROLE_ADMIN) { 
                   step="0.01"
                   class="form-control"
                   id="itemPrice"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Minimum Price <span class="required">*</span></label>
+                <input
+                  type="number"
+                  step="0.01"
+                  class="form-control"
+                  id="itemMinPrice"
                   placeholder="0.00"
                   required
                 />

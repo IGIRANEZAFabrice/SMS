@@ -13,6 +13,7 @@ $sql = 'SELECT
             i.item_id,
             i.item_name AS name,
             i.price,
+            i.min_price,
             s.qty AS stock
         FROM 
             tbl_items i
@@ -30,6 +31,7 @@ if ($res) {
             'item_id' => (int)$row['item_id'],
             'name' => (string)$row['name'],
             'price' => (float)$row['price'],
+            'min_price' => (float)$row['min_price'],
             'stock' => (float)($row['stock'] ?? 0)
         ];
     }
