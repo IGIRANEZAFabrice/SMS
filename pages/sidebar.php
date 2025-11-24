@@ -45,7 +45,7 @@
         <i class="fas fa-file-import"></i>
         <span>Receive New Stock</span>
       </a>
-      <?php } ?>
+      
       <a class="submenu-item" href="index.php?resto=add">
         <i class="fas fa-plus-circle"></i>
         <span>Add Stock</span>
@@ -54,6 +54,7 @@
         <i class="fas fa-user"></i>
         <span>Manage Suppliers</span>
       </a>
+      <?php } ?>
       <a class="submenu-item" href="index.php?resto=damage">
         <i class="fas fa-exclamation-triangle"></i>
         <span>Damaged Goods</span>
