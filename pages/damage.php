@@ -1,4 +1,7 @@
 <?php
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/../config/db.php';
 
 // API Handling
@@ -14,17 +17,35 @@ if (isset($_GET['api'])) {
     $action = isset($input['action']) ? $input['action'] : '';
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        $stmt = $conn->prepare("
-            SELECT d.id, i.name AS item_name, c.name AS category_name, i.unit, d.qty, d.message, d.created_at
-            FROM damaged d
-            JOIN items i ON d.item_id = i.id
-            JOIN categories c ON i.category_id = c.id
-            ORDER BY d.created_at DESC
-        ");
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $data = $result->fetch_all(MYSQLI_ASSOC);
-        echo json_encode(['success' => true, 'data' => $data]);
+        try {
+            $stmt = $conn->prepare("
+                SELECT 
+                    d.id, 
+                    i.item_name, 
+                    c.cat_name as category_name, 
+                    u.unit_name as unit, 
+                    d.qty, 
+                    d.message, 
+                    DATE_FORMAT(d.created_at, '%Y-%m-%d %H:%i:%s') as created_at
+                FROM damaged d
+                JOIN tbl_items i ON d.item_id = i.item_id
+                JOIN tbl_categories c ON i.cat_id = c.cat_id
+                JOIN tbl_units u on i.unit_id = u.unit_id
+                ORDER BY d.created_at DESC
+            ");
+
+            if ($stmt === false) {
+                throw new Exception('Prepare failed: ' . $conn->error);
+            }
+
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $data = $result->fetch_all(MYSQLI_ASSOC);
+            echo json_encode(['success' => true, 'data' => $data]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Database query failed: ' . $e->getMessage()]);
+        }
         exit;
     }
 
@@ -33,6 +54,7 @@ if (isset($_GET['api'])) {
         $qty = isset($input['qty']) ? (float)$input['qty'] : 0;
         $message = isset($input['message']) ? trim($input['message']) : '';
         $created_at = isset($input['created_at']) ? $input['created_at'] : date('Y-m-d');
+        $user_id = $_SESSION['user_id'];
 
         if ($item_id <= 0 || $qty <= 0 || empty($message)) {
             http_response_code(400);
@@ -42,13 +64,34 @@ if (isset($_GET['api'])) {
 
         $conn->begin_transaction();
         try {
+            // Get current stock
+            $stmt_stock = $conn->prepare("SELECT qty FROM tbl_item_stock WHERE item_id = ?");
+            $stmt_stock->bind_param("i", $item_id);
+            $stmt_stock->execute();
+            $result_stock = $stmt_stock->get_result();
+            $last_qty = 0;
+            if ($result_stock->num_rows > 0) {
+                $last_qty = (float)$result_stock->fetch_assoc()['qty'];
+            }
+
+            // Insert into damaged table
             $stmt = $conn->prepare("INSERT INTO damaged (item_id, qty, message, created_at) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("idss", $item_id, $qty, $message, $created_at);
             $stmt->execute();
 
-            $stmt = $conn->prepare("UPDATE items SET quantity = quantity - ? WHERE id = ?");
+            // Update stock
+            $stmt = $conn->prepare("UPDATE tbl_item_stock SET qty = qty - ? WHERE item_id = ?");
             $stmt->bind_param("di", $qty, $item_id);
             $stmt->execute();
+            
+            // Record progress
+            $end_qty = $last_qty - $qty;
+            $stmt_progress = $conn->prepare("
+                INSERT INTO tbl_progress (item_id, date, out_qty, last_qty, end_qty, remark, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt_progress->bind_param("isdddsi", $item_id, $created_at, $qty, $last_qty, $end_qty, $message, $user_id);
+            $stmt_progress->execute();
 
             $conn->commit();
             echo json_encode(['success' => true]);
@@ -68,34 +111,33 @@ if (isset($_GET['api'])) {
             exit;
         }
 
-        // First, get the qty and item_id to revert the stock
-        $stmt = $conn->prepare("SELECT item_id, qty FROM damaged WHERE id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $damaged_item = $result->fetch_assoc();
+        $conn->begin_transaction();
+        try {
+            // First, get the qty and item_id to revert the stock
+            $stmt = $conn->prepare("SELECT item_id, qty FROM damaged WHERE id = ?");
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $damaged_item = $result->fetch_assoc();
 
-        if ($damaged_item) {
-            $conn->begin_transaction();
-            try {
-                $stmt = $conn->prepare("UPDATE items SET quantity = quantity + ? WHERE id = ?");
-                $stmt->bind_param("di", $damaged_item['qty'], $damaged_item['item_id']);
-                $stmt->execute();
+            if ($damaged_item) {
+                $stmt_update = $conn->prepare("UPDATE tbl_item_stock SET qty = qty + ? WHERE item_id = ?");
+                $stmt_update->bind_param("di", $damaged_item['qty'], $damaged_item['item_id']);
+                $stmt_update->execute();
 
-                $stmt = $conn->prepare("DELETE FROM damaged WHERE id = ?");
-                $stmt->bind_param("i", $id);
-                $stmt->execute();
+                $stmt_delete = $conn->prepare("DELETE FROM damaged WHERE id = ?");
+                $stmt_delete->bind_param("i", $id);
+                $stmt_delete->execute();
 
                 $conn->commit();
                 echo json_encode(['success' => true]);
-            } catch (Exception $e) {
-                $conn->rollback();
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+            } else {
+                throw new Exception('Record not found.');
             }
-        } else {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Record not found.']);
+        } catch (Exception $e) {
+            $conn->rollback();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
         exit;
     }
@@ -109,6 +151,17 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: /SMS/index.php?page=login');
     exit;
 }
+
+// Fetch items for the dropdown
+$items = [];
+$stmt = $conn->prepare("
+    SELECT i.item_id as id, i.item_name as name, u.unit_name as unit 
+    FROM tbl_items i 
+    JOIN tbl_units u ON i.unit_id = u.unit_id 
+    ORDER BY i.item_name
+");
+$stmt->execute();
+$items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -147,28 +200,34 @@ if (!isset($_SESSION['user_id'])) {
                             </p>
                         </div>
 
-                        <form id="damagedForm">
+                        <form id="damagedForm" method="POST" action="damage.php">
+                            <input type="hidden" name="action" value="add">
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Select Item <span class="required">*</span></label>
-                                    <select class="form-control" id="itemSelect" required>
-                                        <option value="">Choose an item...</option>
-                                    </select>
+                                    <select class="form-control" id="itemSelect" name="item_id" required>
+                                <option value="">Choose an item...</option>
+                                <?php foreach ($items as $item): ?>
+                                    <option value="<?= htmlspecialchars($item['id']) ?>">
+                                        <?= htmlspecialchars($item['name'] . ' (' . $item['unit'] . ')') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Quantity Damaged <span class="required">*</span></label>
-                                    <input type="number" step="0.01" class="form-control" id="qtyDamaged" placeholder="Enter quantity" required min="0.01" />
+                                    <input type="number" step="0.01" class="form-control" name="qty" id="qtyDamaged" placeholder="Enter quantity" required min="0.01" />
                                 </div>
 
                                 <div class="form-group" style="grid-column: 1 / -1;">
                                     <label>Reason / Message <span class="required">*</span></label>
-                                    <textarea class="form-control" id="damageMessage" placeholder="Describe the reason for damage (e.g., broken during handling, expired, defective)" required></textarea>
+                                    <textarea class="form-control" id="damageMessage" name="message" placeholder="Describe the reason for damage (e.g., broken during handling, expired, defective)" required></textarea>
                                 </div>
 
                                 <div class="form-group">
                                     <label>Date <span class="required">*</span></label>
-                                    <input type="date" class="form-control" id="damageDate" value="<?php echo date('Y-m-d'); ?>" required />
+                                    <input type="date" class="form-control" name="created_at" id="damageDate" value="<?= date('Y-m-d') ?>" required />
                                 </div>
                             </div>
 
@@ -215,56 +274,8 @@ if (!isset($_SESSION['user_id'])) {
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../js/sidebar.js"></script>
     <script src="../js/damage.js"></script>
 </body>
 </html>
-it is not selecting items from the items table ALTER TABLE tbl_items 
-    DROP COLUMN item_unit,
-    ADD COLUMN unit_id INT AFTER item_name,
-    ADD CONSTRAINT fk_item_unit FOREIGN KEY (unit_id) REFERENCES tbl_units(unit_id);
-
-
-
- ALTER TABLE tbl_items
-ADD COLUMN min_price DOUBLE DEFAULT 0 AFTER price;
- CREATE TABLE `damaged` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `item_id` int NOT NULL,
-  `qty` float NOT NULL,
-  `message` varchar(200) NOT NULL,
-  `created_at` date NOT NULL,
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-and it must reduce the stock size :CREATE TABLE tbl_item_stock (
-    stock_id INT AUTO_INCREMENT PRIMARY KEY,
-    item_id INT NOT NULL,
-    qty DOUBLE NOT NULL DEFAULT 0,
-    last_update DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (item_id) REFERENCES tbl_items(item_id)
-);
-
-and record it in the pprogress:CREATE TABLE tbl_progress (
-    prog_id INT AUTO_INCREMENT PRIMARY KEY,
-    item_id INT NOT NULL,
-
-    date DATE NOT NULL,
-
-    in_qty DOUBLE DEFAULT 0,     -- Added stock
-    out_qty DOUBLE DEFAULT 0,    -- Sold / removed
-
-    last_qty DOUBLE DEFAULT 0,   -- Before movement
-    end_qty DOUBLE NOT NULL,     -- After movement
-
-    new_price DOUBLE DEFAULT NULL,
-    remark TEXT,
-
-    created_by INT NOT NULL,     -- Who did it
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (item_id) REFERENCES tbl_items(item_id),
-    FOREIGN KEY (created_by) REFERENCES users(user_id)
-);

@@ -75,6 +75,7 @@ if (!isset($_SESSION['user_id'])) {
 
                 <button class="btn btn-primary" id="checkoutBtn" disabled>Complete Sale</button>
                 <button class="btn btn-secondary" id="clearCartBtn">Clear Cart</button>
+                <br><br>
             </div>
         </div>
           </div>

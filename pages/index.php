@@ -58,6 +58,10 @@ switch ($view) {
         $title = 'Supplier Report';
         $page = 'supplierreport.php';
         break;
+    case 'derivery':
+        $title = 'derivery';
+        $page = 'derivery.php';
+        break;
     case 'user':
         $title = 'Admin Management';
         $page = 'user.php';

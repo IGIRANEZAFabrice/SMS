@@ -1,129 +1,205 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const itemSelect = document.getElementById('itemSelect');
-    const damagedForm = document.getElementById('damagedForm');
-    const damagedTableBody = document.getElementById('damagedTableBody');
-    const searchDamaged = document.getElementById('searchDamaged');
+document.addEventListener("DOMContentLoaded", function () {
+  const damagedForm = document.getElementById("damagedForm");
+  const damagedTableBody = document.getElementById("damagedTableBody");
+  const searchDamaged = document.getElementById("searchDamaged");
 
-    function fetchItems() {
-        fetch('../api/items.php')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    itemSelect.innerHTML = '<option value="">Choose an item...</option>';
-                    data.data.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.id;
-                        option.textContent = `${item.name} (${item.unit})`;
-                        itemSelect.appendChild(option);
-                    });
-                }
-            })
-            .catch(error => console.error('Error fetching items:', error));
-    }
+  // Handle form submission
+  if (damagedForm) {
+    damagedForm.addEventListener("submit", function (e) {
+      e.preventDefault();
 
-    function fetchDamaged() {
-        fetch('../api/damage.php')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    damagedTableBody.innerHTML = '';
-                    data.data.forEach(item => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.id}</td>
-                            <td>${item.item_name}</td>
-                            <td>${item.category_name}</td>
-                            <td>${item.unit}</td>
-                            <td class="text-right">${item.qty}</td>
-                            <td>${item.message}</td>
-                            <td>${item.created_at}</td>
-                            <td>
-                                <button class="btn btn-danger btn-sm" onclick="deleteDamaged(${item.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        `;
-                        damagedTableBody.appendChild(row);
-                    });
-                }
-            })
-            .catch(error => console.error('Error fetching damaged items:', error));
-    }
+      // Show loading state
+      const submitBtn = damagedForm.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
-    damagedForm.addEventListener('submit', function (e) {
-        e.preventDefault();
+      // Prepare form data
+      const formData = new FormData(damagedForm);
+      formData.append('action', 'add');
 
-        const formData = {
-            item_id: itemSelect.value,
-            qty: document.getElementById('qtyDamaged').value,
-            message: document.getElementById('damageMessage').value,
-            created_at: document.getElementById('damageDate').value,
-            action: 'add'
-        };
+      // Convert FormData to JSON for the API
+      const jsonData = {};
+      formData.forEach((value, key) => {
+        jsonData[key] = value;
+      });
 
-        fetch('../api/damage.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire('Success', 'Damaged item recorded successfully.', 'success');
-                    damagedForm.reset();
-                    fetchDamaged();
-                } else {
-                    Swal.fire('Error', data.message || 'Failed to record damaged item.', 'error');
-                }
-            })
-            .catch(error => {
-                Swal.fire('Error', 'An error occurred.', 'error');
-                console.error('Error submitting form:', error);
+      fetch("damage.php?api=1", {
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(jsonData)
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Show success message
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: 'Item has been recorded as damaged successfully!',
+              timer: 2000,
+              showConfirmButton: false
+            }).then(() => {
+              // Reset form and reload data
+              damagedForm.reset();
+              loadDamagedItems();
             });
-    });
-
-    window.deleteDamaged = function (id) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch('../api/damage.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id, action: 'delete' })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire('Deleted!', 'The record has been deleted.', 'success');
-                            fetchDamaged();
-                        } else {
-                            Swal.fire('Error', data.message || 'Failed to delete record.', 'error');
-                        }
-                    })
-                    .catch(error => {
-                        Swal.fire('Error', 'An error occurred.', 'error');
-                        console.error('Error deleting record:', error);
-                    });
-            }
-        });
-    };
-
-    searchDamaged.addEventListener('keyup', function () {
-        const searchTerm = searchDamaged.value.toLowerCase();
-        const rows = damagedTableBody.getElementsByTagName('tr');
-        Array.from(rows).forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(searchTerm) ? '' : 'none';
+          } else {
+            throw new Error(data.message || 'Failed to record damaged item');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'An error occurred while processing your request.',
+            confirmButtonText: 'OK'
+          });
+        })
+        .finally(() => {
+          // Reset button state
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
         });
     });
+  }
 
-    fetchItems();
-    fetchDamaged();
+  // Function to load damaged items
+  function loadDamagedItems() {
+    console.log('Loading damaged items...');
+
+    fetch("damage.php?api=1", {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
+    .then(response => {
+      // Try to parse the JSON body, and if not ok, pass the error message along
+      return response.json().then(data => {
+        if (!response.ok) {
+          return Promise.reject(data); // Reject with the JSON error data from the server
+        }
+        return data; // Forward the data for successful responses
+      });
+    })
+    .then(data => {
+      // This block only handles successful responses with { success: true }
+      if (data && data.success) {
+        if (Array.isArray(data.data)) {
+          console.log(`Loaded ${data.data.length} damaged items`);
+          updateDamagedTable(data.data);
+        } else {
+          console.error('Data is not an array:', data.data);
+          updateDamagedTable([]);
+        }
+      } else {
+        // Handle cases where the server returns a 200 OK with a success: false message
+        throw new Error(data && data.message ? data.message : 'Invalid response format');
+      }
+    })
+    .catch(error => {
+      // This single catch block now handles network errors and JSON-formatted server errors
+      console.error("Error loading damaged items:", error);
+      const errorMessage = error.message || 'An unknown error occurred.';
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to load damaged items: ' + errorMessage,
+        confirmButtonText: 'OK'
+      });
+      updateDamagedTable([]); // Clear the table on error
+    });
+  }
+
+  // Function to update the damaged items table
+  function updateDamagedTable(items) {
+    if (!damagedTableBody) {
+      console.error('Table body element not found');
+      return;
+    }
+
+    console.log('Updating table with items:', items);
+
+    if (!items || items.length === 0) {
+      damagedTableBody.innerHTML = `
+        <tr>
+          <td colspan="8" class="text-center">No damaged items found</td>
+        </tr>`;
+      return;
+    }
+
+    damagedTableBody.innerHTML = items.map(item => `
+      <tr>
+        <td>${item.id || ''}</td>
+        <td>${item.item_name || 'N/A'}</td>
+        <td>${item.category_name || 'N/A'}</td>
+        <td>${item.unit || 'N/A'}</td>
+        <td class="text-right">${item.qty ? parseFloat(item.qty).toFixed(2) : '0.00'}</td>
+        <td>${item.message || 'No message'}</td>
+        <td>${item.created_at || 'N/A'}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="deleteDamaged(${item.id})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // Handle search functionality
+  if (searchDamaged) {
+    searchDamaged.addEventListener("input", function () {
+      const searchTerm = this.value.toLowerCase();
+      const rows = damagedTableBody.getElementsByTagName("tr");
+
+      Array.from(rows).forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? "" : "none";
+      });
+    });
+  }
+
+  // Delete damaged item
+  window.deleteDamaged = function (id) {
+    if (!confirm('Are you sure you want to delete this record? This action cannot be undone.')) {
+      return;
+    }
+
+    fetch('damage.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'delete',
+        id: id
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          loadDamagedItems();
+        } else {
+          alert(data.message || 'Failed to delete record');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the record');
+      });
+  };
+
+  // Initial load of damaged items
+  loadDamagedItems();
+
+  // Also load items when the page becomes visible again
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      loadDamagedItems();
+    }
+  });
 });
