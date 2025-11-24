@@ -1,5 +1,4 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db.php';
 
 // Authentication and Authorization checks (similar to user.php)

@@ -20,12 +20,14 @@
         <span class="menu-item-text">Sell</span>
       </div>
     </a>
+    <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
     <a class="menu-item" href="index.php?resto=sellingprice">
       <div class="menu-item-content">
         <i class="fas fa-tags"></i>
         <span class="menu-item-text">Selling Price</span>
       </div>
     </a>
+     <?php } ?>
     <div class="menu-item" data-dropdown="true" data-page="stock">
       <div class="menu-item-content">
         <i class="fas fa-box"></i>
@@ -46,7 +48,7 @@
         <i class="fas fa-user"></i>
         <span>Manage Suppliers</span>
       </a>
-      <a class="submenu-item" href="index.php?resto=progress">
+      <a class="submenu-item" href="index.php?resto=damage">
         <i class="fas fa-exclamation-triangle"></i>
         <span>Damaged Goods</span>
       </a>
@@ -62,10 +64,6 @@
       <a class="submenu-item" href="index.php?resto=cogs">
         <i class="fas fa-dollar-sign"></i>
         <span>Cost of Goods Sold</span>
-      </a>
-      <a class="submenu-item" href="index.php?resto=progress">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span>Damaged Goods</span>
       </a>
       <a class="submenu-item" href="index.php?resto=supplier-report">
         <i class="fas fa-users"></i>
@@ -84,14 +82,7 @@
       </div>
     </a>
     <?php } ?>
-    <?php if (isset($_SESSION['role_id']) && (int)$_SESSION['role_id'] === ROLE_ADMIN) { ?>
-    <a class="menu-item" href="index.php?resto=minprice">
-      <div class="menu-item-content">
-        <i class="fas fa-money-bill-wave"></i>
-        <span class="menu-item-text"> Minimum Prices</span>
-      </div>
-    </a>
-    <?php } ?>
+    
   </div>
   <div class="toggle-btn" id="toggleBtn">
     <i class="fas fa-bars"></i>

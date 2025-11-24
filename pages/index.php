@@ -16,6 +16,10 @@ switch ($view) {
         $title = 'Dashboard';
         $page = 'home.php';
         break;
+    case 'damage':
+        $title = 'Damaged items';
+        $page = 'damage.php';
+        break;
     case 'sell':
         $title = 'Point of Sale';
         $page = 'sell.php';
