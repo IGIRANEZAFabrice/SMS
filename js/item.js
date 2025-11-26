@@ -159,6 +159,42 @@ function loadItems() {
   });
 }
 
+function loadUnits() {
+  const tbody = document.getElementById("unitsTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (units.length === 0) {
+    return;
+  }
+
+  units.forEach((unit) => {
+    const statusBadge =
+      unit.status === 1
+        ? '<span class="badge badge-success">Active</span>'
+        : '<span class="badge badge-danger">Inactive</span>';
+
+    tbody.innerHTML += `
+            <tr>
+              <td>${unit.unit_id}</td>
+              <td><strong>${unit.unit_name}</strong></td>
+              <td>${statusBadge}</td>
+              <td>${unit.created_at || ''}</td>
+              <td>
+                <div class="action-buttons">
+                  <button class="btn btn-sm btn-primary" onclick="editUnit(${unit.unit_id})">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteUnit(${unit.unit_id}, '${String(unit.unit_name).replace(/'/g, "\\'")}')">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+  });
+}
+
 // Load opening stock table
 function loadOpeningStock() {
   const tbody = document.getElementById("openingStockTableBody");
