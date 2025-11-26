@@ -469,18 +469,101 @@ async function addOpeningStock(e) {
 
 // Edit/Delete functions (simplified)
 function editCategory(id) {
+  const cat = categories.find((c) => c.cat_id === id);
+  if (!cat) return;
+
   Swal.fire({
-    icon: "info",
     title: "Edit Category",
-    text: "Edit functionality - connect to your API",
+    html: `
+      <div class="form-group">
+        <label>Category Name</label>
+        <input id="editCatName" class="swal2-input" value="${cat.cat_name}" required>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="editCatDesc" class="swal2-textarea">${cat.description || ""}</textarea>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: "Update",
+    showLoaderOnConfirm: true,
+    preConfirm: async () => {
+      const name = document.getElementById("editCatName").value.trim();
+      const desc = document.getElementById("editCatDesc").value.trim();
+      if (!name) {
+        Swal.showValidationMessage("Please enter a category name");
+        return false;
+      }
+      try {
+        const response = await fetch("additem.php?api=categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `action=update&cat_id=${id}&cat_name=${encodeURIComponent(name)}&description=${encodeURIComponent(desc)}`,
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.message || "Failed to update category");
+        }
+        return data;
+      } catch (error) {
+        Swal.showValidationMessage(error.message || "Failed to update category");
+        return false;
+      }
+    },
+    allowOutsideClick: () => !Swal.isLoading(),
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      showAlert("success", "Success", "Category updated successfully");
+      await fetchCategories();
+      loadDropdowns();
+    }
   });
 }
 
 function deleteCategory(id) {
   Swal.fire({
-    icon: "warning",
     title: "Delete Category",
-    text: "Delete functionality - connect to your API",
+    text: "Are you sure you want to delete this category?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, delete it!",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch("additem.php?api=categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `action=delete&cat_id=${id}`,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          const msg = errorData.message || `HTTP error! status: ${response.status}`;
+          throw new Error(msg);
+        }
+
+        const data = await response.json();
+        if (data && data.success) {
+          showAlert("success", "Deleted!", "Category deleted successfully");
+          await fetchCategories();
+          loadDropdowns();
+        } else {
+          throw new Error(data.message || "Failed to delete category");
+        }
+      } catch (error) {
+        const text = /in use/i.test(error.message)
+          ? "Cannot delete: Category is in use by one or more items"
+          : error.message || "Failed to delete category. Please try again.";
+        showAlert("error", "Error", text);
+      }
+    }
   });
 }
 
