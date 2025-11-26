@@ -137,12 +137,15 @@ function calculateCategoryStats() {
 
     reportData.sales.forEach(sale => {
         if(stats[sale.cat_id]) {
-            const revenue = sale.qty * sale.sale_price;
-            const cogs = sale.qty * sale.cost_price;
+            const q = parseFloat(sale.qty) || 0;
+            const sp = parseFloat(sale.sale_price) || 0;
+            const cp = parseFloat(sale.cost_price) || 0;
+            const revenue = q * sp;
+            const cogs = q * cp;
             stats[sale.cat_id].revenue += revenue;
             stats[sale.cat_id].cogs += cogs;
             stats[sale.cat_id].profit += revenue - cogs;
-            stats[sale.cat_id].qtySold += sale.qty;
+            stats[sale.cat_id].qtySold += q;
         }
     });
     return Object.values(stats).filter(s => s.qtySold > 0);
@@ -188,9 +191,12 @@ function loadItemTable() {
         if (!acc[sale.item_id]) {
             acc[sale.item_id] = { name: sale.item_name, category: sale.cat_name, qty: 0, totalRevenue: 0, totalCOGS: 0 };
         }
-        acc[sale.item_id].qty += sale.qty;
-        acc[sale.item_id].totalRevenue += sale.qty * sale.sale_price;
-        acc[sale.item_id].totalCOGS += sale.qty * sale.cost_price;
+        const q = parseFloat(sale.qty) || 0;
+        const sp = parseFloat(sale.sale_price) || 0;
+        const cp = parseFloat(sale.cost_price) || 0;
+        acc[sale.item_id].qty += q;
+        acc[sale.item_id].totalRevenue += q * sp;
+        acc[sale.item_id].totalCOGS += q * cp;
         return acc;
     }, {});
 
