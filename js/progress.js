@@ -59,7 +59,7 @@ async function loadItemProgress() {
     document.getElementById(
       "currentStock"
     ).textContent = `${item_info.current_stock} ${item_info.unit_name}`;
-    document.getElementById("itemPrice").textContent = `RWF ${parseFloat(
+    document.getElementById("itemPrice").textContent = `$${parseFloat(
       item_info.price
     ).toFixed(2)}`;
 

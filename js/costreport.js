@@ -12,7 +12,7 @@ function formatCurrency(amount) {
     if (typeof amount !== 'number') {
         amount = parseFloat(amount) || 0;
     }
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'RWF' }).format(amount);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: '$' }).format(amount);
 }
 
 async function loadReportData() {

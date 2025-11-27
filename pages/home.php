@@ -248,7 +248,7 @@ if ($result) {
                                             label += ': ';
                                         }
                                         if (context.parsed.y !== null) {
-                                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'RWF' }).format(context.parsed.y);
+                                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: '$' }).format(context.parsed.y);
                                         }
                                         return label;
                                     }
@@ -263,7 +263,7 @@ if ($result) {
                                 },
                                 ticks: {
                                     callback: function(value, index, values) {
-                                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'RWF', notation: 'compact' }).format(value);
+                                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: '$', notation: 'compact' }).format(value);
                                     }
                                 }
                             },

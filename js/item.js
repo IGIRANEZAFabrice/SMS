@@ -138,7 +138,7 @@ function loadItems() {
               <td><strong>${item.item_name}</strong></td>
               <td>${cat ? cat.cat_name : "N/A"}</td>
               <td>${item.unit_name}</td>
-              <td>${item.price.toFixed(2)} RWF</td>
+              <td>$ ${item.price.toFixed(2)}</td>
               <td>${status}</td>
               <td>
                 <div class="action-buttons">

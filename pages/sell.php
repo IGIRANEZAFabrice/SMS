@@ -64,12 +64,12 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="totals-section">
                     <div class="total-row">
                         <span class="total-label">Subtotal:</span>
-                        <span class="total-value" id="subtotal">RWF 0.00</span>
+                        <span class="total-value" id="subtotal">$ 0.00</span>
                     </div>
                     <input type="number" class="discount-input" id="discountInput" placeholder="Discount amount" min="0" step="0.01">
                     <div class="total-row grand-total">
                         <span>Grand Total:</span>
-                        <span id="grandTotal">RWF 0.00</span>
+                        <span id="grandTotal">$ 0.00</span>
                     </div>
                 </div>
 

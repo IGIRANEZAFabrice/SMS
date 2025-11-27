@@ -126,15 +126,15 @@ if (!isset($_SESSION['user_id'])) {
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-header"><div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div><div class="stat-title">Total Revenue</div></div>
-                            <div class="stat-value" id="totalRevenue">RWF0.00</div>
+                            <div class="stat-value" id="totalRevenue">$0.00</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-header"><div class="stat-icon red"><i class="fas fa-shopping-cart"></i></div><div class="stat-title">Total COGS</div></div>
-                            <div class="stat-value" id="totalCOGS">RWF0.00</div>
+                            <div class="stat-value" id="totalCOGS">$0.00</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-header"><div class="stat-icon blue"><i class="fas fa-chart-pie"></i></div><div class="stat-title">Gross Profit</div></div>
-                            <div class="stat-value" id="grossProfit">RWF0.00</div>
+                            <div class="stat-value" id="grossProfit">$0.00</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-header"><div class="stat-icon purple"><i class="fas fa-percentage"></i></div><div class="stat-title">Profit Margin</div></div>
