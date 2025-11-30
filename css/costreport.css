@@ -113,6 +113,24 @@ select.form-control {
   background: #059669;
 }
 
+/* Excel export button: green default, outline on hover */
+.btn-success.btn-export {
+  background: var(--green);
+  color: var(--white);
+  border: 2px solid var(--green);
+}
+
+.btn-success.btn-export:hover {
+  background: var(--white);
+  color: var(--green);
+  border-color: var(--green);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.btn-success.btn-export i {
+  color: inherit;
+}
+
 /* Stats */
 .stats-grid {
   display: grid;

@@ -115,7 +115,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <button class="btn btn-primary" onclick="applyFilters()">
                                     <i class="fas fa-filter"></i> Apply
                                 </button>
-                                <button class="btn btn-success" onclick="exportReport()">
+                                <button class="btn btn-success btn-export" onclick="exportReportExcel()">
                                     <i class="fas fa-file-excel"></i> Export
                                 </button>
                             </div>
