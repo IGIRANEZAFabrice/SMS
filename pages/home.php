@@ -99,7 +99,7 @@ if ($result) {
                         <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-card-info">
                             <h3>Total Revenue</h3>
-                            <div class="value">FRW<?php echo number_format($stats['revenue']); ?></div>
+                            <div class="value">$<?php echo number_format($stats['revenue']); ?></div>
                         </div>
                     </div>
                     <div class="stat-card green">
@@ -248,7 +248,7 @@ if ($result) {
                                             label += ': ';
                                         }
                                         if (context.parsed.y !== null) {
-                                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'RWF' }).format(context.parsed.y);
+                                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
                                         }
                                         return label;
                                     }
@@ -263,7 +263,7 @@ if ($result) {
                                 },
                                 ticks: {
                                     callback: function(value, index, values) {
-                                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'RWF', notation: 'compact' }).format(value);
+                                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact' }).format(value);
                                     }
                                 }
                             },

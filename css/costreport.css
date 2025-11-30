@@ -274,12 +274,6 @@ tr:hover {
   background: var(--light-bg);
 }
 
-.totals-row td {
-  background: var(--blue-light);
-  color: var(--blue-text);
-  font-weight: 700;
-}
-
 .item-row {
   display: flex;
   align-items: center;
@@ -376,13 +370,6 @@ tr:hover {
 .tab-content.active {
   display: block;
   animation: fadeIn 0.3s ease;
-}
-
-.tab-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-bottom: 10px;
 }
 
 @keyframes fadeIn {

@@ -34,8 +34,8 @@ body {
 }
 
 .stat-cards {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 15px;
   margin-bottom: 30px;
 }
@@ -75,7 +75,6 @@ body {
   align-items: center;
   gap: 15px;
   min-height: 100px;
-  flex: 1 1 220px;
 }
 
 .stat-card:hover {
@@ -259,8 +258,8 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .stat-card {
-    flex: 1 1 220px;
+  .stat-cards {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 
   .page-header h1 {
@@ -292,6 +291,7 @@ body {
   }
 
   .stat-cards {
+    grid-template-columns: 1fr;
     gap: 15px;
     margin-bottom: 20px;
   }
@@ -299,7 +299,6 @@ body {
   .stat-card {
     padding: 20px;
     gap: 15px;
-    flex: 1 1 100%;
   }
 
   .stat-card .icon {
@@ -402,12 +401,4 @@ body {
     box-shadow: none;
     border: 1px solid var(--gray-light);
   }
-}
-.stat-card.revenue-card {
-  flex: 0 0 auto;
-  width: auto;
-}
-
-.stat-card.revenue-card .stat-card-info .value {
-  white-space: nowrap;
 }
