@@ -20,7 +20,7 @@ if (!$input || !isset($input['items']) || !is_array($input['items'])) {
 $items = $input['items'];
 $discount = isset($input['discount']) ? (float)$input['discount'] : 0;
 $user_id = (int)$_SESSION['user_id'];
-$username = $_SESSION['username'] ?? 'N/A';
+$username = $_SESSION['fullname'] ?? 'N/A';
 
 $conn->begin_transaction();
 
