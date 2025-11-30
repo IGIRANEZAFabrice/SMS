@@ -378,6 +378,13 @@ tr:hover {
   animation: fadeIn 0.3s ease;
 }
 
+.tab-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

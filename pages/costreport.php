@@ -117,12 +117,6 @@ if (!isset($_SESSION['user_id'])) {
                                 <button class="btn btn-primary" onclick="applyFilters()">
                                     <i class="fas fa-filter"></i> Apply
                                 </button>
-                                <button class="btn btn-success" onclick="exportReportExcel()">
-                                    <i class="fas fa-file-excel"></i> Export Excel
-                                </button>
-                                <button class="btn btn-primary" onclick="exportReportPDF()">
-                                    <i class="fas fa-file-pdf"></i> Export PDF
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -165,9 +159,9 @@ if (!isset($_SESSION['user_id'])) {
                             <button class="tab-btn" onclick="switchTab(event, 'by-item')"><i class="fas fa-box"></i> By Item</button>
                             <button class="tab-btn" onclick="switchTab(event, 'by-category')"><i class="fas fa-tags"></i> By Category</button>
                         </div>
-                        <div class="tab-content active" id="by-receiptTab"><div class="table-container"><table><thead><tr><th>Receipt Code</th><th>Date</th><th>Items Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Created By</th></tr></thead><tbody id="receiptTableBody"></tbody></table></div></div>
-                        <div class="tab-content" id="by-itemTab"><div class="table-container"><table><thead><tr><th>Item Name</th><th>Category</th><th class="text-right">Qty Sold</th><th class="text-right">Avg Sale Price</th><th class="text-right">Avg Cost Price</th><th class="text-right">Unit P/L</th><th class="text-right">Total P/L</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th>Margin</th></tr></thead><tbody id="itemTableBody"></tbody></table></div></div>
-                        <div class="tab-content" id="by-categoryTab"><div class="table-container"><table><thead><tr><th>Category</th><th class="text-right">Items Sold</th><th class="text-right">Qty Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Performance</th></tr></thead><tbody id="categoryTableBody"></tbody></table></div></div>
+                        <div class="tab-content active" id="by-receiptTab"><div class="tab-toolbar"><button class="btn btn-success" onclick="exportReportExcel()"><i class="fas fa-file-excel"></i> Export Excel</button><button class="btn btn-primary" onclick="exportReportPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button></div><div class="table-container"><table><thead><tr><th>Receipt Code</th><th>Date</th><th>Items Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Created By</th></tr></thead><tbody id="receiptTableBody"></tbody></table></div></div>
+                        <div class="tab-content" id="by-itemTab"><div class="tab-toolbar"><button class="btn btn-success" onclick="exportReportExcel()"><i class="fas fa-file-excel"></i> Export Excel</button><button class="btn btn-primary" onclick="exportReportPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button></div><div class="table-container"><table><thead><tr><th>Item Name</th><th>Category</th><th class="text-right">Qty Sold</th><th class="text-right">Avg Sale Price</th><th class="text-right">Avg Cost Price</th><th class="text-right">Unit P/L</th><th class="text-right">Total P/L</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th>Margin</th></tr></thead><tbody id="itemTableBody"></tbody></table></div></div>
+                        <div class="tab-content" id="by-categoryTab"><div class="tab-toolbar"><button class="btn btn-success" onclick="exportReportExcel()"><i class="fas fa-file-excel"></i> Export Excel</button><button class="btn btn-primary" onclick="exportReportPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button></div><div class="table-container"><table><thead><tr><th>Category</th><th class="text-right">Items Sold</th><th class="text-right">Qty Sold</th><th class="text-right">Total Revenue</th><th class="text-right">Total COGS</th><th class="text-right">Gross Profit</th><th class="text-right">Margin %</th><th>Performance</th></tr></thead><tbody id="categoryTableBody"></tbody></table></div></div>
                     </div>
                 </div>
             </div>
