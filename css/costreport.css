@@ -274,6 +274,12 @@ tr:hover {
   background: var(--light-bg);
 }
 
+.totals-row td {
+  background: var(--blue-light);
+  color: var(--blue-text);
+  font-weight: 700;
+}
+
 .item-row {
   display: flex;
   align-items: center;

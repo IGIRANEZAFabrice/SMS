@@ -95,7 +95,7 @@ if ($result) {
                 </div>
 
                 <div class="stat-cards">
-                    <div class="stat-card blue">
+                    <div class="stat-card blue revenue-card">
                         <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
                         <div class="stat-card-info">
                             <h3>Total Revenue</h3>
@@ -248,7 +248,7 @@ if ($result) {
                                             label += ': ';
                                         }
                                         if (context.parsed.y !== null) {
-                                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: '$' }).format(context.parsed.y);
+                                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'RWF' }).format(context.parsed.y);
                                         }
                                         return label;
                                     }
@@ -263,7 +263,7 @@ if ($result) {
                                 },
                                 ticks: {
                                     callback: function(value, index, values) {
-                                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: '$', notation: 'compact' }).format(value);
+                                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'RWF', notation: 'compact' }).format(value);
                                     }
                                 }
                             },

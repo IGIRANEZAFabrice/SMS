@@ -122,7 +122,7 @@ document.getElementById("addSupplierForm").addEventListener("submit", (e) => {
           icon: "success",
           title: "Supplier Added!",
           text: `${supplierName} has been added successfully`,
-          timer: 2000,
+          timer: 3000,
           showConfirmButton: false,
         });
       }

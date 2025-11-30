@@ -79,6 +79,8 @@ if (!isset($_SESSION['user_id'])) {
     <title>Cost of Goods Sold (COGS) Report</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2"></script>
     <link rel="stylesheet" href="../css/sidebar.css" />
     <link rel="stylesheet" href="../css/costreport.css" />
 </head>
@@ -115,8 +117,11 @@ if (!isset($_SESSION['user_id'])) {
                                 <button class="btn btn-primary" onclick="applyFilters()">
                                     <i class="fas fa-filter"></i> Apply
                                 </button>
-                                <button class="btn btn-success" onclick="exportReport()">
-                                    <i class="fas fa-file-excel"></i> Export
+                                <button class="btn btn-success" onclick="exportReportExcel()">
+                                    <i class="fas fa-file-excel"></i> Export Excel
+                                </button>
+                                <button class="btn btn-primary" onclick="exportReportPDF()">
+                                    <i class="fas fa-file-pdf"></i> Export PDF
                                 </button>
                             </div>
                         </div>
